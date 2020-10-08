@@ -60,11 +60,13 @@ class Init:
 
         Args:
             project: The default project to use when making API calls.
-            location: The default location to use when making API calls. If not set defaults to us-central-1
+            location: The default location to use when making API calls. If not set
+                defaults to us-central-1
             experiment: The experiment to assign
-            staging_bucket: The default staging bucket to use to stage artifacts when making API calls.
-            credentials: The default custom credentials to use when making API calls. If not provided,
-             crendentials will be ascertained from the environment.
+            staging_bucket: The default staging bucket to use to stage artifacts when
+                making API calls.
+            credentials: The default custom credentials to use when making API calls. If
+                not provided crendentials will be ascertained from the environment.
         """
         if project:
             self._project = project
@@ -113,18 +115,17 @@ class Init:
         location_override: Optional[str] = None,
         prediction_client: Optional[bool] = False,
     ) -> Dict[str, str]:
-        """Creates client_options for GAPIC service client using location and client type.
+        """Creates GAPIC client_options using location and type.
 
         Args:
             location_override (str):
-                Set this parameter to get client options for a location different
-                from location set by initializer. Must be a GCP region
-                supported by AI Platform (Unified).
+                Set this parameter to get client options for a location different from
+                location set by initializer. Must be a GCP region supported by AI
+                Platform (Unified).
 
             prediction_client (bool):
-                True if service client is a PredictionServiceClient, otherwise
-                defaults to False. This is used to provide a prediction-specific
-                API endpoint.
+                True if service client is a PredictionServiceClient, otherwise defaults 
+                to False. This is used to provide a prediction-specific API endpoint.
 
         Returns:
             clients_options (dict):
@@ -143,7 +144,9 @@ class Init:
 
         utils.validate_region(region)
 
-        client_options = {"api_endpoint": f"{region}-{prediction}{utils.PROD_API_ENDPOINT}"}
+        client_options = {
+            "api_endpoint": f"{region}-{prediction}{utils.PROD_API_ENDPOINT}"
+        }
 
         return client_options
 

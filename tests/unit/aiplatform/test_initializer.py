@@ -74,19 +74,32 @@ class TestInit:
     @pytest.mark.parametrize(
         "init_location, location_override, prediction, expected_endpoint",
         [
-            ("us-central1", None, False, "us-central1-aiplatform.googleapis.com"),
+            (
+                "us-central1",
+                None,
+                False,
+                "us-central1-aiplatform.googleapis.com"),
             (
                 "us-central1",
                 "europe-west4",
                 False,
                 "europe-west4-aiplatform.googleapis.com",
             ),
-            ("asia-east1", None, False, "asia-east1-aiplatform.googleapis.com"),
-            ("asia-east1", None, True, "asia-east1-prediction-aiplatform.googleapis.com"),
+            (
+                "asia-east1",
+                None,
+                False,
+                "asia-east1-aiplatform.googleapis.com"),
+            (
+                "asia-east1",
+                None,
+                True,
+                "asia-east1-prediction-aiplatform.googleapis.com"),
         ],
     )
     def test_get_client_options(
-        self, init_location: str, location_override: str, prediction: bool, expected_endpoint: str
+        self, init_location: str, location_override: str, prediction: bool,
+        expected_endpoint: str
     ):
         initializer.singleton.init(location=init_location)
 
