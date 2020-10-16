@@ -135,7 +135,8 @@ class _Config:
             api_endpoint=f"{region}-{prediction}{utils.PROD_API_ENDPOINT}"
         )
 
-    def get_resource_parent(self, project: Optional[str], location: Optional[str]):
+    def get_resource_parent(self, project: Optional[str] = None,
+        location: Optional[str] = None):
         return '/'.join(['projects', project or self.project, 'locations',
                             location or self.location])
 
@@ -155,5 +156,5 @@ class _Config:
 
 
 
-# globa config to store init parameters: ie, aiplatform.init(project=..., location=...)
+# global config to store init parameters: ie, aiplatform.init(project=..., location=...)
 global_config = _Config()

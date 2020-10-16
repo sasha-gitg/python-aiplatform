@@ -71,6 +71,8 @@ class Model(base.AiPlatformResourceNoun):
 
         Args:
             model_name (str): The name of the model to retrieve.
+        Returns:
+            model: Managed Model resource.
         """
         resource_name = ModelServiceClient.model_path(self.project, self.location,
                                                       model_name)
@@ -79,13 +81,18 @@ class Model(base.AiPlatformResourceNoun):
         model = self.api_client.get_model(name=resource_name)
         return model
     
+    # TODO(b/170979552) Add support for predict schemata
+    # TODO(b/170979926) Add support for metadata and metadata schema
     @classmethod
     def upload(cls,
                display_name:str,
                artifact_uri: str,
                serving_container_image_uri: str,
+               # TODO (b/162273530) lift requirement for predict/health route when
+               # validation lifted and move these args down
                serving_container_predict_route: str,
                serving_container_health_route: str,
+               *,
                description:Optional[str]=None,
                serving_container_command: Optional[Sequence[str]]=None,
                serving_container_args: Optional[Sequence[str]]=None,
@@ -95,7 +102,15 @@ class Model(base.AiPlatformResourceNoun):
                location: Optional[str]=None,
                credentials: Optional[auth_credentials.Credentials]=None,
                ) -> 'Model':
-        """Uploads a model and returns a Model representing the Model resource.
+        """Uploads a model and returns a Model representing the uploaded Model resource.
+
+        Example usage:
+
+        my_model = Model.upload(
+            display_name='my-model',
+            artifact_uri='gs://my-model/saved-model'
+            serving_container_image_uri='tensorflow/serving'
+        )
 
         Args:
             display_name (str):
@@ -117,13 +132,42 @@ class Model(base.AiPlatformResourceNoun):
             description (str):
                 The description of the model.
             serving_container_command: Optional[Sequence[str]]=None,
+                The command with which the container is run. Not executed within a
+                shell. The Docker image's ENTRYPOINT is used if this is not provided.
+                Variable references $(VAR_NAME) are expanded using the container's
+                environment. If a variable cannot be resolved, the reference in the
+                input string will be unchanged. The $(VAR_NAME) syntax can be escaped
+                with a double $$, ie: $$(VAR_NAME). Escaped references will never be
+                expanded, regardless of whether the variable exists or not.
             serving_container_args: Optional[Sequence[str]]=None,
+                The arguments to the command. The Docker image's CMD is used if this is
+                not provided. Variable references $(VAR_NAME) are expanded using the
+                container's environment. If a variable cannot be resolved, the reference
+                in the input string will be unchanged. The $(VAR_NAME) syntax can be
+                escaped with a double $$, ie: $$(VAR_NAME). Escaped references will
+                never be expanded, regardless of whether the variable exists or not.
             serving_container_environment_variables: Optional[Dict[str, str]]=None,
+                The environment variables that are to be present in the container.
+                Should be a dictionary where keys are environment variable names
+                and values are environment variable values for those names. 
             serving_container_ports: Optional[Sequence[int]]=None,
+                Declaration of ports that are exposed by the container. This field is
+                primarily informational, it gives AI Platform information about the
+                network connections the container uses. Listing or not a port here has
+                no impact on whether the port is actually exposed, any port listening on
+                the default "0.0.0.0" address inside a container will be accessible from
+                the network.
             project: Optional[str]=None,
+                Project to upload this model to. Overrides project set in
+                aiplatform.init.
             location: Optional[str]=None,
+                Location to upload this model to. Overrides location set in
+                aiplatform.init.
             credentials: Optional[auth_credentials.Credentials]=None,
-
+                Custom credentials to use to upload this model. Overrides credentials
+                set in aiplatform.init. 
+        Returns:
+            model: Instantiated representation of the uplaoded model resource.
         """
         
         api_client = cls._instantiate_client(location, credentials)
@@ -159,9 +203,11 @@ class Model(base.AiPlatformResourceNoun):
             model=managed_model)
 
         managed_model = lro.result()
-        fields = utils.extract_fields_from_resource_name(managed_model.model)
-        return cls(model_name=field.id, project=field.project, location=field.location)
+        fields = utils.extract_fields_form_resource_name(managed_model.model)
+        return cls(model_name=fields.id, project=fields.project,
+            location=fields.location)
 
+    # TODO(b/169782716) add support for deployment when Endpoint class complete
     def deploy(self):
         raise NotImplementedError('Deployment not implemented.')
         

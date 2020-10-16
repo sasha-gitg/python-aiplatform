@@ -86,7 +86,7 @@ def validate_name(
             project, location, resource, and id. These fields can be used for
             subsequent method calls in the SDK.
     """
-    fields = extract_fields(resource_name)
+    fields = extract_fields_form_resource_name(resource_name)
 
     if not fields:
         return None
