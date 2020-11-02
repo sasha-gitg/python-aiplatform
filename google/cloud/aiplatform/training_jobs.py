@@ -17,11 +17,13 @@
 
 import datetime
 import functools
+import logging
 import pathlib
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Callable, Dict, Optional, Sequence
 
 
@@ -31,25 +33,43 @@ from google.cloud.aiplatform import datasets
 from google.cloud.aiplatform import initializer
 from google.cloud.aiplatform import models
 from google.cloud.aiplatform import schema
+from google.cloud.aiplatform import utils
 from google.cloud.aiplatform_v1beta1 import AcceleratorType
 from google.cloud.aiplatform_v1beta1 import CustomJobSpec
 from google.cloud.aiplatform_v1beta1 import FractionSplit
 from google.cloud.aiplatform_v1beta1 import GcsDestination
+from google.cloud.aiplatform_v1beta1 import InputDataConfig
+from google.cloud.aiplatform_v1beta1 import JobServiceClient
+from google.cloud.aiplatform_v1beta1 import MachineSpec
 from google.cloud.aiplatform_v1beta1 import Model
 from google.cloud.aiplatform_v1beta1 import ModelContainerSpec
 from google.cloud.aiplatform_v1beta1 import PipelineServiceClient
+from google.cloud.aiplatform_v1beta1 import PipelineState
 from google.cloud.aiplatform_v1beta1 import PythonPackageSpec
-from google.cloud.aiplatform_v1beta1 import MachineSpec
+from google.cloud.aiplatform_v1beta1 import TrainingPipeline
 from google.cloud.aiplatform_v1beta1 import WorkerPoolSpec
 from google.cloud import storage
+from google.protobuf import json_format
+from google.protobuf.struct_pb2 import Value
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+_LOGGER = logging.getLogger(__name__)
+
+PIPELINE_COMPLETE_STATES = set(
+    [PipelineState.PIPELINE_STATE_SUCCEEDED,
+    PipelineState.PIPELINE_STATE_FAILED,
+    PipelineState.PIPELINE_STATE_CANCELLED,
+    PipelineState.PIPELINE_STATE_PAUSED])
 
 
-def _timestamped_gcs_path(root_gcs_path: str, dir_name_prefix: str):
+def _timestamped_gcs_dir(root_gcs_path: str, dir_name_prefix: str):
     timestamp = datetime.datetime.now().isoformat(sep="-", timespec="milliseconds")
     dir_name = "-".join([dir_name_prefix, timestamp])
     if root_gcs_path.endswith('/'):
         root_gcs_path = root_gcs_path[:-1]
-    return '/'.join([root_gcs_path, dir_name])
+    gcs_path = '/'.join([root_gcs_path, dir_name])
+    if not gcs_path.startswith('gs://'):
+        return 'gs://' + gcs_path
 
 
 def _timestamped_copy_to_gcs(
@@ -273,7 +293,9 @@ setup(
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             source_distribution_path = self.make_package(tmpdirname)
-            return copy_method(source_distribution_path)
+            output_location = copy_method(source_distribution_path) 
+            _LOGGER.info("Training script copied to %s." % output_location)
+            return output_location
 
     def package_and_copy_to_gcs(
         self,
@@ -304,6 +326,15 @@ setup(
     def module_name(self) -> str:
         """Module name that can be executed during training. ie. python -m"""
         return f"{self._ROOT_MODULE}.{self._TASK_MODULE_NAME}"
+
+
+class CustomJob(base.AiPlatformResourceNoun):
+    client_class = JobServiceClient
+    _is_client_prediction_client = False
+
+    def __init__(self, custom_job_name, project=None, location=None, credentials=None):
+        super().__init__(project=project, location=location, credentials=credentials)
+        self._gca_resource = self.api_client.get_custom_job(name=custom_job_name)
 
 
 class CustomTrainingJob(base.AiPlatformResourceNoun):
@@ -346,9 +377,10 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
         self._staging_bucket = staging_bucket
         self._project = project
         self._credentials = credentials
-        self._model_serving_container_image_uri = model_serving_container_image_uri,
+        self._model_serving_container_image_uri = model_serving_container_image_uri
         self._model_serving_container_predict_route = model_serving_container_predict_route
         self._model_serving_container_health_route = model_serving_container_health_route
+        self._gca_resource = None
 
 
 
@@ -358,7 +390,7 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
     # TODO() add scheduling, custom_job.Scheduling
     def run(
         self,
-        dataset: Optional[datasets.Dataset],
+        dataset: Optional[datasets.Dataset] = None,
         base_output_dir: Optional[str] = None,
         args: Optional[Dict[str, str]] = None,
         replica_count: str=0,
@@ -367,9 +399,9 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
         accelerator_count: int=0,
         model_display_name: Optional[str] = None,
 
-        training_fraction_split: float = 1.0,
-        validation_fraction_split: float = 0.0,
-        test_fraction_split: float = 0.0,
+        training_fraction_split: float = 0.8,
+        validation_fraction_split: float = 0.1,
+        test_fraction_split: float = 0.1,
 
 
     ) -> models.Model:
@@ -404,64 +436,59 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
             The trainer model resource.
         """
 
+        if self._has_run:
+            raise RunTimeError("Custom Training has already run.")
+
+
         def flatten_args(args):
             return [f"--{key}={value}" for key, value in args.items()]
 
 
-        # TODO: add logging about uploading python package
-        # Make python package
-        python_packager = TrainingScriptPythonPackager(
+        python_packager = _TrainingScriptPythonPackager(
             script_path=self._script_path,
             requirements=self._requirements
         )
 
         package_gcs_uri = python_packager.package_and_copy_to_gcs(
-            gcs_staging_dir = self._staging_bucket,
+            gcs_staging_dir = self._staging_bucket or initializer.global_config.staging_bucket,
             project = self._project or initializer.global_config.project,
             credentials = self._credentials or initializer.global_config.credentials,
         )
 
-        # Create Package spec
-        python_package_spec = PythonPackageSpec(
-            executor_image_uri=self._container_uri,
-            package_uris=[package_gcs_uri],
-            python_model=python_packager.module_name,
-            args=flatten_args(args)
-        )
-
-        # Create machine spec
-        machine_spec = MachineSpec(
-            machine_type=machine_type,
-            accelerator_type=getattr(AcceleratorType, accelerator_type,
-                AcceleratorType.ACCELERATOR_TYPE_UNSPECIFIED),
-            accelerator_count=accelerator_count
-
-        )
-
-        # Create worker pool spec
-        worker_pool_spec = WorkerPoolSpec(
-            python_package_spec=python_package_spec,
-            machine_spec=machine_spec,
-            replica_count=replica_count
-        )
-
-        # Create fraction split spec
-        fraction_split = FractionSplit(
-            training_fraction=training_fraction,
-            validation_fraction=validation_fraction,
-            test_fraction=test_fraction
-        )
-
-        # set base output directory for training
-        base_output_dir = base_output_dir or _get_timestamped_gcs_dir(
+        base_output_dir = base_output_dir or _timestamped_gcs_dir(
             self._staging_bucket or initializer.global_config.staging_bucket,
             'aiplatform-custom-training')
 
-        # create custom job spec
-        custom_job_spec = CustomJobSpec(
-            worker_pool_spec=worker_pool_spec,
-            gcs_destination=GcsDestination(output_uri_prefix=base_output_dir)
+        worker_pool_spec= {
+                "replicaCount": replica_count,
+                "machineSpec": {
+                  "machineType": machine_type
+                },
+                "pythonPackageSpec": {
+                  "executorImageUri": self._container_uri,
+                  "pythonModule": python_packager.module_name,
+                  "packageUris": [package_gcs_uri]
+                },
+              }
 
+
+        # validate accelerator type
+        accelerator_enum = getattr(AcceleratorType, accelerator_type,
+                AcceleratorType.ACCELERATOR_TYPE_UNSPECIFIED)
+
+        if accelerator_enum != AcceleratorType.ACCELERATOR_TYPE_UNSPECIFIED:
+            worker_pool_spec["machineSpec"]["acceleratorType"] = accelerator_type
+            worker_pool_spec["machineSpec"]["acceleratorCount"] = accelerator_count
+
+        if args:
+            worker_pool_spec["pythonPackageSpec"]["args"] = flatten_args(args)
+
+
+        # Create fraction split spec
+        fraction_split = FractionSplit(
+            training_fraction=training_fraction_split,
+            validation_fraction=validation_fraction_split,
+            test_fraction=test_fraction_split
         )
 
         
@@ -472,22 +499,22 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
             # if args need for model is incomplete
             # TODO (b/162273530) lift requirement for predict/health route when
             # validation lifted and move these args down
-            if not all(self._model_serving_container_image_uri,
+            if not all([self._model_serving_container_image_uri,
             self._model_serving_container_predict_route,
-            self._model_serving_container_health_route):
+            self._model_serving_container_health_route]):
                 
-                raise RuntimeError("""model_display_name was provided but 
+                raise ValueError("""model_display_name was provided but 
                     model_serving_container_image_uri,
                     model_serving_container_predict_route, and
                     model_serving_container_health_route were not provided when this 
-                    custom job was constructed.
+                    custom pipeline was constructed.
                     """)
 
 
             container_spec = ModelContainerSpec(
                 image_uri=self._model_serving_container_image_uri,
-                predict_route=self._serving_container_predict_route,
-                health_route=self._serving_container_health_route,
+                predict_route=self._model_serving_container_predict_route,
+                health_route=self._model_serving_container_health_route
             )
 
             managed_model = Model(
@@ -495,26 +522,158 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
                 container_spec=container_spec
             )
 
-        # create input data config
-        
-            
+        input_data_config=None
+        if dataset:
+            #create input data config
+            input_data_config = InputDataConfig(
+                fraction_split=fraction_split,
+                dataset_id=dataset.name,
+                gcs_destination=GcsDestination(output_uri_prefix=base_output_dir))
             
         # create training pipeline
         training_pipeline = TrainingPipeline(
             display_name = self._display_name,
             training_task_definition = schema.training_job.definition.custom_task,
-            training_task_inputs= custom_job_spec,
-            model_to_upload=managed_model
+            training_task_inputs= json_format.ParseDict(
+                {
+                    "workerPoolSpecs": [worker_pool_spec],
+                    'baseOutputDirectory': {"output_uri_prefix": base_output_dir}
+                }, Value()),
+            model_to_upload=managed_model,
+            input_data_config=input_data_config
         )
 
+        training_pipeline = self.api_client.create_training_pipeline(
+                parent=initializer.global_config.common_location_path(
+                    self.project, self.location),
+                training_pipeline=training_pipeline)
+
+        self._gca_resource = training_pipeline
+
+        _LOGGER.info("View Pipeline at: %s" % self._dashboard_uri())
+
+        return self.get_model()
 
 
+    def _latest_gca_resource(self):
+        self._gca_resource = self.api_client.get_training_pipeline(
+                name=self.resource_name
+            )
+
+    def _block_until_complete(self):
+        wait = 5 # start at five seconds
+        max_wait = 60 * 1  # 1 minute wait
+        multiplier = 2 # scale wait by 2 every iteration
+
+        while self.state not in PIPELINE_COMPLETE_STATES:
+            self._latest_gca_resource()
+            time.sleep(wait)
+            _LOGGER.info("Training %s current state: %s" %
+                (self._gca_resource.name, self._gca_resource.state))
+            wait = min(wait * multiplier, max_wait)
+
+        self._log_failure()
+
+        if self._gca_resource.model_to_upload and not self.is_failed:
+            _LOGGER.info("Model available at %s" %
+                self._gca_resource.model_to_upload.name)
+
+    def _log_failure(self):
+        if self._gca_resource.error:
+            _LOGGER.error("Training failed with:\n%s" % self._gca_resource.error)
+
+    # TODO(asobran) add project and location
+    @classmethod
+    def get(cls, training_pipline_name: str):
+        self = cls.__new__(cls)
+        self.api_client = cls._instantiate_client()
+        self._gca_resource = self.api_client.get_training_pipeline(
+            name=training_pipline_name)
+        return self
 
 
+    # TODO (asobran) take project and location
+    @classmethod
+    def list(cls):
+        def instantiate_pipeline(gca_resource, api_client):
+            # TODO (asobran) populate with additional attributes 
+            self = cls.__new__(cls)
+            self._gca_resource = gca_resource
+            self.api_client = api_client
+            return self
+
+        api_client = cls._instantiate_client()
+
+        return [instantiate_pipeline(pipeline, api_client) for pipeline in
+        api_client.list_training_pipelines(
+            parent=initializer.global_config.common_location_path())]
+
+    
+    def get_model(self) -> Optional[models.Model]:
+        self._block_until_complete()
+        
+        if not self._gca_resource.model_to_upload:
+            raise RuntimeError(
+                f"Training Pipeline {self.resource_name} is not configured to upload a "
+                "Model. Create the Training Pipeline with "
+                "model_serving_container_image_uri and model_display_name passed in."
+            )
 
 
+        if self.is_failed:
+            raise RuntimeError(
+                f"Training Pipeline {self.resource_name} failed. No model available.")
+
+        model_name = getattr(self._gca_resource.model_to_upload, 'name', None)
+
+        if model_name:
+            # TODO(asobran) update when resource name supported by Model
+            return models.Model(
+                self._gca_resource.model_to_upload.name.split('/')[-1])
 
 
+    @property
+    def _has_run(self) -> bool:
+        return self._gca_resource is not None
 
-class AutoMLTablesTrainingJob(TrainingJob):
+    def _assert_has_run(self):
+        if not _has_run:
+            raise RuntimeError(
+                "TrainingPipeline has not been launched. You must run this"
+                " TrainingPipeline using TrainingPipeline.run. ")
+
+    @property
+    def state(self) -> PipelineState:
+        return self._gca_resource.state
+
+    @property
+    def is_succeeded(self) -> bool:
+        self._assert_has_run()
+        return self.state == PipelineState.PIPELINE_STATE_SUCCEEDED
+
+    @property
+    def is_failed(self) -> bool:
+        self._assert_has_run()
+        return self.state == PipelineState.PIPELINE_STATE_FAILED
+    
+
+    @property
+    def backing_custom_job(self) -> Optional[CustomJob]:
+        self._assert_has_run()
+        self._get_training_pipeline()
+        training_task_metadata = self._gca_resource.training_task_metadata
+        if training_task_metadata:
+            custom_job_name = training_task_metadata.get('backingCustomJob')
+            if custom_job_name:
+                # TODO(asobran) pass in pipeline project and location
+                return CustomJob(custom_job_name)
+
+
+    def _dashboard_uri(self):
+        fields = utils.extract_fields_from_resource_name(self.resource_name)
+        url = f'https://console.cloud.google.com/ai/platform/locations/{fields.location}/training/{fields.id}?project={fields.project}'
+        return url
+
+
+class AutoMLTablesTrainingJob(base.AiPlatformResourceNoun):
     pass
