@@ -186,7 +186,7 @@ class Dataset(base.AiPlatformResourceNoun):
 
             # Validate that source and import schema are passed together or not at all
             if bool(source) ^ bool(import_schema_uri):
-                if metadata_schema_uri != schema.dataset.metadata.tables:
+                if metadata_schema_uri != schema.dataset.metadata.tabular:
                     raise ValueError(
                         "Please provide both source and import_schema_uri to import data or omit both."
                     )

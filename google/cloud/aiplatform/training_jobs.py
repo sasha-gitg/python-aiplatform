@@ -40,17 +40,15 @@ from google.cloud.aiplatform_v1beta1 import FractionSplit
 from google.cloud.aiplatform_v1beta1 import GcsDestination
 from google.cloud.aiplatform_v1beta1 import InputDataConfig
 from google.cloud.aiplatform_v1beta1 import JobServiceClient
-from google.cloud.aiplatform_v1beta1 import MachineSpec
 from google.cloud.aiplatform_v1beta1 import Model
 from google.cloud.aiplatform_v1beta1 import ModelContainerSpec
 from google.cloud.aiplatform_v1beta1 import PipelineServiceClient
 from google.cloud.aiplatform_v1beta1 import PipelineState
-from google.cloud.aiplatform_v1beta1 import PythonPackageSpec
 from google.cloud.aiplatform_v1beta1 import TrainingPipeline
-from google.cloud.aiplatform_v1beta1 import WorkerPoolSpec
 from google.cloud import storage
 from google.protobuf import json_format
 from google.protobuf.struct_pb2 import Value
+from google.rpc import code_pb2
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
@@ -190,6 +188,9 @@ setup(
         "{python_executable} setup.py sdist --formats=gztar"
     )
 
+    # Module name that can be executed during training. ie. python -m
+    module_name = f"{_ROOT_MODULE}.{_TASK_MODULE_NAME}"
+
     def __init__(self, script_path: str, requirements: Optional[Sequence[str]] = None):
         """Initializes packager.
 
@@ -294,7 +295,7 @@ setup(
         with tempfile.TemporaryDirectory() as tmpdirname:
             source_distribution_path = self.make_package(tmpdirname)
             output_location = copy_method(source_distribution_path) 
-            _LOGGER.info("Training script copied to %s." % output_location)
+            _LOGGER.info("Training script copied to:\n%s." % output_location)
             return output_location
 
     def package_and_copy_to_gcs(
@@ -322,11 +323,6 @@ setup(
         )
         return self.package_and_copy(copy_method=copy_method)
 
-    @property
-    def module_name(self) -> str:
-        """Module name that can be executed during training. ie. python -m"""
-        return f"{self._ROOT_MODULE}.{self._TASK_MODULE_NAME}"
-
 
 class CustomJob(base.AiPlatformResourceNoun):
     client_class = JobServiceClient
@@ -338,6 +334,11 @@ class CustomJob(base.AiPlatformResourceNoun):
 
 
 class CustomTrainingJob(base.AiPlatformResourceNoun):
+    """Class to launch a Custom Training Job in AI Platform using a script.
+
+    Takes a training implementation as a python script and executes that script
+    in Cloud AI Platform Training. 
+    """
 
     client_class = PipelineServiceClient
     _is_client_prediction_client = False
@@ -548,14 +549,17 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
                     self.project, self.location),
                 training_pipeline=training_pipeline)
 
+        print(training_pipeline)
+
         self._gca_resource = training_pipeline
 
-        _LOGGER.info("View Pipeline at: %s" % self._dashboard_uri())
+        _LOGGER.info("View Training:\n%s" % self._dashboard_uri())
+        _LOGGER.info("Training Output directory:\n%s " % base_output_dir)
 
         return self.get_model()
 
 
-    def _latest_gca_resource(self):
+    def _sync_gca_resource(self):
         self._gca_resource = self.api_client.get_training_pipeline(
                 name=self.resource_name
             )
@@ -566,7 +570,7 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
         multiplier = 2 # scale wait by 2 every iteration
 
         while self.state not in PIPELINE_COMPLETE_STATES:
-            self._latest_gca_resource()
+            self._sync_gca_resource()
             time.sleep(wait)
             _LOGGER.info("Training %s current state: %s" %
                 (self._gca_resource.name, self._gca_resource.state))
@@ -579,7 +583,7 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
                 self._gca_resource.model_to_upload.name)
 
     def _log_failure(self):
-        if self._gca_resource.error:
+        if self._gca_resource.error.code != code_pb2.OK:
             _LOGGER.error("Training failed with:\n%s" % self._gca_resource.error)
 
     # TODO(asobran) add project and location
@@ -637,7 +641,7 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
         return self._gca_resource is not None
 
     def _assert_has_run(self):
-        if not _has_run:
+        if not self._has_run:
             raise RuntimeError(
                 "TrainingPipeline has not been launched. You must run this"
                 " TrainingPipeline using TrainingPipeline.run. ")
