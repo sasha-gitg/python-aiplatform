@@ -781,7 +781,7 @@ class CustomTrainingJob(base.AiPlatformResourceNoun):
         return self.state == PipelineState.PIPELINE_STATE_FAILED
 
 
-    def _dashboard_uri(self):
+    def _dashboard_uri(self) -> str:
         """Helper method to compose the dashboard uri where training can be viewed."""
         fields = utils.extract_fields_from_resource_name(self.resource_name)
         url = f'https://console.cloud.google.com/ai/platform/locations/{fields.location}/training/{fields.id}?project={fields.project}'
