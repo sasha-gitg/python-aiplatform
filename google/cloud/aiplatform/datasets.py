@@ -22,7 +22,6 @@ from google.auth import credentials as auth_credentials
 
 from google.cloud.aiplatform import base
 from google.cloud.aiplatform import initializer
-from google.cloud.aiplatform import schema
 from google.cloud.aiplatform.utils import validate_id
 from google.cloud.aiplatform.utils import extract_fields_from_resource_name
 
@@ -174,32 +173,13 @@ class Dataset(base.AiPlatformResourceNoun):
                 Instantiated representation of the managed dataset resource.
         """
 
-        def arg_validator(source, metadata_schema_uri, import_schema_uri):
-            # If tables and source
-            if metadata_schema_uri == schema.dataset.metadata.tabular and source:
-                return
-
-            # If tables and not source
-            if metadata_schema_uri == schema.dataset.metadata.tabular and not source:
-                raise ValueError(
-                    "Please provide source when creating a Tabular dataset")
-
-            # Validate that source and import schema are passed together or not at all
-            if bool(source) ^ bool(import_schema_uri):
-                if metadata_schema_uri != schema.dataset.metadata.tabular:
-                    raise ValueError(
-                        "Please provide both source and import_schema_uri to import data or omit both."
-                    )
-
-        arg_validator(source, metadata_schema_uri, import_schema_uri)
+        # Validate that source and import schema are passed together or not at all
+        if bool(source) ^ bool(import_schema_uri):
+            raise ValueError(
+                "Please provide both source and import_schema_uri to import data or omit both."
+            )
 
         api_client = cls._instantiate_client(location=location, credentials=credentials)
-
-        
-        # if this is tabular enrich the dataset metadata with source
-        dataset_metadata = None
-        if metadata_schema_uri == schema.dataset.metadata.tabular:
-            dataset_metadata = {'input_config': {'gcs_source':{'uri':[source]}}}
 
         create_dataset_lro = cls._create(
             display_name=display_name,
@@ -207,7 +187,6 @@ class Dataset(base.AiPlatformResourceNoun):
                 project=project, location=location
             ),
             metadata_schema_uri=metadata_schema_uri,
-            dataset_metadata=dataset_metadata,
             request_metadata=metadata,
             labels=labels,
             api_client=api_client,
@@ -223,7 +202,7 @@ class Dataset(base.AiPlatformResourceNoun):
         )
 
         # If an import source was not provided, return empty created Dataset.
-        if not import_schema_uri:
+        if not source:
             return dataset_obj
 
         return dataset_obj.import_data(
@@ -239,8 +218,7 @@ class Dataset(base.AiPlatformResourceNoun):
         parent: str,
         display_name: str,
         metadata_schema_uri: str,
-        dataset_metadata: Optional[Dict] = None,
-        labels: Optional[Dict] = None,
+        labels: Optional[Dict] = {},
         request_metadata: Sequence[Tuple[str, str]] = (),
     ) -> operation.Operation:
         """Creates a new managed dataset by directly calling API client.
@@ -286,7 +264,6 @@ class Dataset(base.AiPlatformResourceNoun):
         gapic_dataset = GapicDataset(
             display_name=display_name,
             metadata_schema_uri=metadata_schema_uri,
-            metadata=dataset_metadata,
             labels=labels,
         )
 
