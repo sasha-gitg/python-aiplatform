@@ -78,11 +78,11 @@ class _Config:
             return self._project
 
         project_not_found_exception_str = (
-                "Unable to find your project. Please provide a project ID by:"
-                "\n- Passing a constructor argument"
-                "\n- Using aiplatform.init()"
-                "\n- Setting a GCP environment variable"
-            )
+            "Unable to find your project. Please provide a project ID by:"
+            "\n- Passing a constructor argument"
+            "\n- Using aiplatform.init()"
+            "\n- Setting a GCP environment variable"
+        )
 
         try:
             _, project_id = google.auth.default()
