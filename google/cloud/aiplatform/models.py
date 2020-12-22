@@ -692,6 +692,38 @@ class Endpoint(base.AiPlatformResourceNounWithFutureManager):
 
         operation_future.result()
 
+    @classmethod
+    def list(cls, project=None, location=None, credentials=None):
+        project = project or initializer.global_config.project
+        location = location or initializer.global_config.location
+
+        print(project)
+        print(location)
+
+        api_client = cls._instantiate_client(location=location, credentials=credentials)
+
+        endpoints = api_client.list_endpoints(
+            parent=endpoint_service_client.EndpointServiceClient.common_location_path(project=project,
+                                                                                      location=location))
+
+        return [cls(endpoint.name) for endpoint in endpoints]
+
+    def undeploy_all(self):
+        for deployed_model in self._gca_resource.deployed_models:
+            self.undeploy(deployed_model_id=deployed_model.id)
+            self._sync_gca_resource()
+
+    def delete(self, force=False):
+        if force:
+            self.undeploy_all()
+        self.api_client.delete_endpoint(name=self.resource_name)
+        del self
+
+    @classmethod
+    def delete_all(cls, project=None, location=None, credentials=None, force=False):
+        for endpoint in cls.list(project=project, location=location, credentials=credentials):
+            endpoint.delete(force=force)
+
     def undeploy(
         self,
         deployed_model_id: str,
