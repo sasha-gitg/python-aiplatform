@@ -39,6 +39,7 @@ from google.cloud.aiplatform_v1beta1.types import model as gca_model
 from google.cloud.aiplatform_v1beta1.types import machine_resources
 from google.cloud.aiplatform_v1beta1.types import prediction_service
 from google.cloud.aiplatform_v1beta1.types import endpoint_service
+from google.cloud.aiplatform_v1beta1.types import EncryptionSpec
 
 _TEST_PROJECT = "test-project"
 _TEST_PROJECT_2 = "test-project-2"
@@ -74,12 +75,18 @@ _TEST_MACHINE_TYPE = "n1-standard-32"
 _TEST_ACCELERATOR_TYPE = "NVIDIA_TESLA_P100"
 _TEST_ACCELERATOR_COUNT = 2
 
+# dataset_encryption
+_TEST_ENCRYPTION_KEY_NAME = "key_1234"
+_TEST_ENCRYPTION_SPEC = EncryptionSpec(kms_key_name=_TEST_ENCRYPTION_KEY_NAME)
+
 
 @pytest.fixture
 def get_endpoint_mock():
     with mock.patch.object(EndpointServiceClient, "get_endpoint") as get_endpoint_mock:
         get_endpoint_mock.return_value = gca_endpoint.Endpoint(
-            display_name=_TEST_DISPLAY_NAME, name=_TEST_ENDPOINT_NAME,
+            display_name=_TEST_DISPLAY_NAME,
+            name=_TEST_ENDPOINT_NAME,
+            encryption_spec=_TEST_ENCRYPTION_SPEC,
         )
         yield get_endpoint_mock
 
@@ -283,14 +290,45 @@ class TestEndpoint:
 
     @pytest.mark.usefixtures("get_endpoint_mock")
     @pytest.mark.parametrize("sync", [True, False])
-    def test_create(self, create_endpoint_mock, sync):
-        aiplatform.init(project=_TEST_PROJECT, location=_TEST_LOCATION)
+    def test_init_aiplatform_with_encryption_key_name_and_create_endpoint(
+        self, create_endpoint_mock, sync
+    ):
+        aiplatform.init(
+            project=_TEST_PROJECT,
+            location=_TEST_LOCATION,
+            encryption_spec_key_name=_TEST_ENCRYPTION_KEY_NAME,
+        )
         my_endpoint = models.Endpoint.create(display_name=_TEST_DISPLAY_NAME, sync=sync)
 
         if not sync:
             my_endpoint.wait()
 
-        expected_endpoint = gca_endpoint.Endpoint(display_name=_TEST_DISPLAY_NAME)
+        expected_endpoint = gca_endpoint.Endpoint(
+            display_name=_TEST_DISPLAY_NAME, encryption_spec=_TEST_ENCRYPTION_SPEC
+        )
+        create_endpoint_mock.assert_called_once_with(
+            parent=_TEST_PARENT, endpoint=expected_endpoint, metadata=(),
+        )
+
+        expected_endpoint.name = _TEST_ENDPOINT_NAME
+        assert my_endpoint._gca_resource == expected_endpoint
+
+    @pytest.mark.usefixtures("get_endpoint_mock")
+    @pytest.mark.parametrize("sync", [True, False])
+    def test_create(self, create_endpoint_mock, sync):
+        aiplatform.init(project=_TEST_PROJECT, location=_TEST_LOCATION)
+        my_endpoint = models.Endpoint.create(
+            display_name=_TEST_DISPLAY_NAME,
+            encryption_spec_key_name=_TEST_ENCRYPTION_KEY_NAME,
+            sync=sync,
+        )
+
+        if not sync:
+            my_endpoint.wait()
+
+        expected_endpoint = gca_endpoint.Endpoint(
+            display_name=_TEST_DISPLAY_NAME, encryption_spec=_TEST_ENCRYPTION_SPEC
+        )
         create_endpoint_mock.assert_called_once_with(
             parent=_TEST_PARENT, endpoint=expected_endpoint, metadata=(),
         )
