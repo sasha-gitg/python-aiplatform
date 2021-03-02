@@ -1441,6 +1441,7 @@ class Model(base.AiPlatformResourceNounWithFutureManager):
         max_replica_count: Optional[int] = None,
         labels: Optional[dict] = None,
         credentials: Optional[auth_credentials.Credentials] = None,
+        encryption_spec_key_name: Optional[str] = None,
         sync: bool = True,
     ) -> "jobs.BatchPredictionJob":
         """Creates a batch prediction job using this Model and outputs prediction
@@ -1554,6 +1555,17 @@ class Model(base.AiPlatformResourceNounWithFutureManager):
             credentials: Optional[auth_credentials.Credentials] = None
                 Optional. Custom credentials to use to create this batch prediction
                 job. Overrides credentials set in aiplatform.init.
+            encryption_spec_key_name (Optional[str]):
+                Optional. The Cloud KMS resource identifier of the customer
+                managed encryption key used to protect a resource. Has the
+                form:
+                ``projects/my-project/locations/my-region/keyRings/my-kr/cryptoKeys/my-key``.
+                The key needs to be in the same region as where the compute
+                resource is created.
+
+                If set, this Dataset and all sub-resources of this Dataset will be secured by this key.
+
+                Overrides encryption_spec_key_name set in aiplatform.init.                
         Returns:
             (jobs.BatchPredictionJob):
                 Instantiated representation of the created batch prediction job.
@@ -1580,5 +1592,6 @@ class Model(base.AiPlatformResourceNounWithFutureManager):
             project=self.project,
             location=self.location,
             credentials=credentials or self.credentials,
+            encryption_spec_key_name=encryption_spec_key_name,
             sync=sync,
         )
