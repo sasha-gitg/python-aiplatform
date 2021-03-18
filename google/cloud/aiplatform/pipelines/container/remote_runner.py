@@ -1,7 +1,5 @@
 import inspect
 import argparse
-import importlib
-import json
 import os
 from google.cloud import aiplatform
 from google.cloud import storage
@@ -64,7 +62,7 @@ def resolve_init_args(key, value, project):
 
 
 
-def runner(cls_name, method_name, resource_name_output_uri, kwargs): #serialized_args):
+def runner(cls_name, method_name, resource_name_output_uri, kwargs):
     cls = getattr(aiplatform, cls_name)
 
     init_args, method_args, config_args = split_args(kwargs)
@@ -75,8 +73,6 @@ def runner(cls_name, method_name, resource_name_output_uri, kwargs): #serialized
     }
 
     project = resolve_project(serialized_args)
-
-    #aiplatform.init(**config_args)
 
     for key, param in inspect.signature(cls.__init__).parameters.items():
         if key in serialized_args['init']:
@@ -115,7 +111,6 @@ def main():
     parser.add_argument("--cls_name", type=str)
     parser.add_argument("--method_name", type=str)
     parser.add_argument("--resource_name_output_uri", type=str)
-    # parser.add_argument("--serialized_args", type=str)
 
     args, unknown_args = parser.parse_known_args()
     kwargs = {}
@@ -134,12 +129,11 @@ def main():
                 key_value = None
 
         
-    #print(args.serialized_args)
     print(runner(
         args.cls_name,
         args.method_name,
         args.resource_name_output_uri,    
-        kwargs)) #json.loads(args.serialized_args)))
+        kwargs))
 
 
 
