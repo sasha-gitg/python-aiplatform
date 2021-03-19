@@ -10,4 +10,4 @@ CustomContainerTrainingJobRunOp = utils.convert_method_to_component(aiplatform.C
 
 ModelDeployOp = utils.convert_method_to_component(aiplatform.Model.deploy, should_serialize_init=True)
 
-ModelUploadOp = utils.convert_method_to_component(aiplatform.Model.upload, should_serialize_init=True)
+ModelUploadOp = utils.convert_method_to_component(aiplatform.Model.upload)
