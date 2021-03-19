@@ -9,16 +9,28 @@ from google.cloud.aiplatform_v1.services.prediction_service import (
 
 # can possibly be a base class
 class ClientWithOverride:
-    base_client = v1_prediction_service_client.PredictionServiceClient
-    override_client = v1beta1_prediction_service_client.PredictionServiceClient
-    override_apis = ("explain",)
+    client_map = {
+        'v1': v1_prediction_service_client.PredictionServiceClient,
+        'v1beta1': v1beta1_prediction_service_client.PredictionServiceClient
+    }
+    default = 'v1'
 
     def __init__(self, *args, **kwargs):
-        self._client = self.base_client(*args, **kwargs)
-        self._override_client = self.override_client(*args, **kwargs)
-        self._override_apis = set(self.override_apis)
+        self._clients = {key: client(*args, **kwargs) for key, client in self.client_map.items()}
 
     def __getattr__(self, attr):
-        if attr in self._override_apis:
-            return getattr(self._override_client, attr)
-        return getattr(self._client, attr)
+        return getattr(self._client[self.default], attr)
+    
+    def select_version(self, version: str):
+        return self._clients[version]
+    
+# Usage
+client = ClientWithOverride()
+client.predict() # no change for most APIs
+
+client.select_version('v1beta1').explain() #explicitly have to call when selecting a non default version
+
+if explain:
+    client.select_version('v1beta1').batch_predict()
+else:
+    client.batch_predict()
