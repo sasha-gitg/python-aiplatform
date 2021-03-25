@@ -150,8 +150,6 @@ class _Job(base.AiPlatformResourceNounWithFutureManager):
 
         # Used these numbers so failures surface fast
         wait = 5  # start at five seconds
-        max_wait = 60 * 5  # 5 minute wait
-        multiplier = 2  # scale wait by 2 every iteration
 
         while self.state not in _JOB_COMPLETE_STATES:
             time.sleep(wait)
@@ -159,7 +157,6 @@ class _Job(base.AiPlatformResourceNounWithFutureManager):
                 " %s current state:\n%s"
                 % (self.resource_name, self._gca_resource.state)
             )
-            wait = min(wait * multiplier, max_wait)
 
         # Error is only populated when the job state is
         # JOB_STATE_FAILED or JOB_STATE_CANCELLED.
