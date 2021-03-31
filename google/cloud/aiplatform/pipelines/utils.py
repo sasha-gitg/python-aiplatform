@@ -5,16 +5,18 @@ import kfp
 INIT_KEY = 'init'
 METHOD_KEY = 'method'
 
+
+
 def convert_method_to_component(method, should_serialize_init=False):
     method_name = method.__name__
+    method_signature = inspect.signature(method)
 
     if inspect.ismethod(method):
         cls_name = method.__self__.__name__
         init_signature = inspect.signature(method.__self__.__init__)
     else:
         cls = getattr(inspect.getmodule(method),
-                      method.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
-                      None)
+                      method.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
         cls_name = cls.__name__
         init_signature = inspect.signature(cls.__init__)
 
@@ -78,5 +80,7 @@ implementation:
         print(component_text)
 
         return components.load_component_from_text(component_text)(**input_kwargs)
+
+    f.__doc__ = method.__doc__
 
     return f

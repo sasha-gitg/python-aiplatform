@@ -23,7 +23,6 @@ def split_args(kwargs):
     return init_args, method_args, config_args
 
 def write_to_gcs(project, gcs_uri, text):
-    
     gcs_uri = gcs_uri[5:]
     gcs_bucket, gcs_blob = gcs_uri.split('/', 1)
     
