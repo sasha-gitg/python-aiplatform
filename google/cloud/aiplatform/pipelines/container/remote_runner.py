@@ -3,6 +3,7 @@ import argparse
 import os
 from google.cloud import aiplatform
 from google.cloud import storage
+import utils
 
 INIT_KEY = 'init'
 METHOD_KEY = 'method'
@@ -54,12 +55,11 @@ def resolve_input_args(value, _type, project):
     return value
 
 def resolve_init_args(key, value, project):
+    """Resolves Metadata/InputPath parameters to resource names."""
     if key.endswith('_name'):
         if value.startswith('gs://'): # not a resource noun
             value = read_from_gcs(project, value)
     return value
-
-
 
 def runner(cls_name, method_name, resource_name_output_uri, kwargs):
     cls = getattr(aiplatform, cls_name)
@@ -89,8 +89,10 @@ def runner(cls_name, method_name, resource_name_output_uri, kwargs):
 
     for key, param in inspect.signature(method).parameters.items():
         if key in serialized_args['method']:
-            type_args = getattr(param.annotation, '__args__', param.annotation)
-            cast = type_args[0] if isinstance(type_args, tuple) else type_args
+            # type_args = getattr(param.annotation, '__args__', param.annotation)
+            # cast = type_args[0] if isinstance(type_args, tuple) else type_args
+            cast = utils.resolve_annotation(param.annotation)
+            print(key, cast)
             serialized_args['method'][key] = resolve_input_args(serialized_args['method'][key], cast, project)
             serialized_args['method'][key] = cast(serialized_args['method'][key])
     

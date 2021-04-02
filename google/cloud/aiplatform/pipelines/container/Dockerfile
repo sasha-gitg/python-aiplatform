@@ -8,6 +8,7 @@ RUN pip3 install git+https://github.com/googleapis/python-aiplatform@mb-release
 
 # Copies the trainer code to the docker image.
 COPY remote_runner.py /root/remote_runner.py
+COPY utils.py /root/utils.py
 
 # Sets up the entry point to invoke the trainer.
 ENTRYPOINT ["python3", "remote_runner.py"]

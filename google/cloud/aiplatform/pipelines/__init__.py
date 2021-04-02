@@ -12,6 +12,12 @@ DatasetCreateOp = utils.convert_method_to_component(aiplatform.Dataset.create)
 ImageDatasetCreateOp = utils.convert_method_to_component(
 	aiplatform.ImageDataset.create)
 
+TabularDatasetCreateOp = utils.convert_method_to_component(
+	aiplatform.TabularDataset.create)
+
+TextDatasetCreateOp = utils.convert_method_to_component(
+	aiplatform.TextDataset.create)
+
 # needs to handle optional outputs
 # CustomContainerTrainingJobRunOp = utils.convert_method_to_component(
 # 	aiplatform.CustomContainerTrainingJob.run,
@@ -27,3 +33,6 @@ ModelDeployOp = utils.convert_method_to_component(
 
 ModelUploadOp = utils.convert_method_to_component(
 	aiplatform.Model.upload)
+
+EndpointCreateOp = utils.convert_method_to_component(
+	aiplatform.Endpoint.create)
