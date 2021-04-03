@@ -1,4 +1,5 @@
 import inspect
+import json
 from typing import Any, Callable, Optional, Tuple, Union
 
 from google.cloud import aiplatform
@@ -55,6 +56,9 @@ def resolve_annotation(annotation: Any) -> Any:
             return resolved_annotation
         else:
             return annotation.__args__[0]
+
+    if annotation is inspect._empty:
+        return None
 
     return annotation
 

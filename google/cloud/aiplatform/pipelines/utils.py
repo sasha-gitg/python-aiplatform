@@ -118,7 +118,8 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
     init_arg_names = set(init_signature.parameters.keys()) if should_serialize_init else set([])
 
     output_type = shared_utils.resolve_annotation(method_signature.return_annotation)
-    output_metadata_name, output_metadata_type = map_resource_to_metadata_type(output_type) 
+    if output_type:
+        output_metadata_name, output_metadata_type = map_resource_to_metadata_type(output_type) 
 
     def make_args(sa):
         additional_args = []
@@ -151,11 +152,15 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
             param_type = shared_utils.resolve_annotation(param_type)
             serializer = shared_utils.get_serializer(param_type)
             if serializer:
+                print(serializer, param_type, value)
                 param_type = str
                 value = serializer(value)
+                print(value)
             
             # TODO: remove PipelineParam check when Metadata Importer component available
-            if isinstance(value, kfp.dsl._pipeline_param.PipelineParam):
+            # if we serialize we need to include the argument as input
+            # perhaps, another option is to embed in yaml as json seralized list 
+            if isinstance(value, kfp.dsl._pipeline_param.PipelineParam) or serializer:
                 if should_be_metadata_type(param_type):  
                     metadata_type = map_resource_to_metadata_type(param_type)[1]
                     inputs.append(f"- {{name: {key}, type: {metadata_type}}}")
@@ -176,6 +181,10 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
         if should_serialize_init:
             init_signature.bind(**init_kwargs)
         method_signature.bind(**method_kwargs)
+
+        # TODO: add output as optional based on output_type
+        # should also add as default arg in remote runner
+        outputs = []
 
 
         inputs = "\n".join(inputs) if len(inputs) > 1 else ''

@@ -18,6 +18,22 @@ TabularDatasetCreateOp = utils.convert_method_to_component(
 TextDatasetCreateOp = utils.convert_method_to_component(
 	aiplatform.TextDataset.create)
 
+VideoDatasetCreateOp = utils.convert_method_to_component(
+	aiplatform.VideoDataset.create)
+
+# need to handle None return
+ImageDatasetImportOp = utils.convert_method_to_component(
+	aiplatform.ImageDataset.import_data, should_serialize_init=True)
+
+TabularDatasetImportOp = utils.convert_method_to_component(
+	aiplatform.TabularDataset.import_data, should_serialize_init=True)
+
+TextDatasetImportOp = utils.convert_method_to_component(
+	aiplatform.TextDataset.import_data, should_serialize_init=True)
+
+VideoDatasetImportOp = utils.convert_method_to_component(
+	aiplatform.VideoDataset.import_data, should_serialize_init=True)
+
 # needs to handle optional outputs
 # CustomContainerTrainingJobRunOp = utils.convert_method_to_component(
 # 	aiplatform.CustomContainerTrainingJob.run,
@@ -27,9 +43,25 @@ AutoMLImageTrainingJobRunOp = utils.convert_method_to_component(
 	aiplatform.AutoMLImageTrainingJob.run,
 	should_serialize_init=True)
 
+AutoMLTextTrainingJobRunOp = utils.convert_method_to_component(
+	aiplatform.AutoMLTextTrainingJob.run,
+	should_serialize_init=True)
+
+AutoMLTabularTrainingJobRunOp = utils.convert_method_to_component(
+	aiplatform.AutoMLTabularTrainingJob.run,
+	should_serialize_init=True)
+
+AutoMLVideoTrainingJobRunOp = utils.convert_method_to_component(
+	aiplatform.AutoMLVideoTrainingJob.run,
+	should_serialize_init=True)
+
 ModelDeployOp = utils.convert_method_to_component(
 	aiplatform.Model.deploy,
 	should_serialize_init=True)
+
+# ModelBatchPredictOp = utils.convert_method_to_component(
+# 	aiplatform.Model.batch_predict,
+# 	should_serialize_init=True)
 
 ModelUploadOp = utils.convert_method_to_component(
 	aiplatform.Model.upload)

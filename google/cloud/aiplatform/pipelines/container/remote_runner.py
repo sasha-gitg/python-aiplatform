@@ -49,7 +49,7 @@ def resolve_project(serialized_args):
 
 def resolve_input_args(value, _type, project):
     """If this is an input from Pipelines, read it directly from gcs."""
-    if issubclass(_type, aiplatform.base.AiPlatformResourceNoun):
+    if inspect.isclass(_type) and issubclass(_type, aiplatform.base.AiPlatformResourceNoun):
         if value.startswith('gs://'): # not a resource noun:
             value = read_from_gcs(project, value)
     return value
@@ -79,22 +79,27 @@ def runner(cls_name, method_name, resource_name_output_uri, kwargs):
                 key,
                 serialized_args['init'][key],
                 project)
+            param_type = utils.resolve_annotation(param.annotation)
+            deserializer = utils.get_deserializer(param_type)
+            if deserializer:
+                serialized_args['init'][key] = deserializer(serialized_args['init'][key])
             
     
     print(serialized_args['init'])
     obj = cls(**serialized_args['init']) if serialized_args['init'] else cls
 
-    
     method = getattr(obj, method_name)
 
     for key, param in inspect.signature(method).parameters.items():
         if key in serialized_args['method']:
-            # type_args = getattr(param.annotation, '__args__', param.annotation)
-            # cast = type_args[0] if isinstance(type_args, tuple) else type_args
-            cast = utils.resolve_annotation(param.annotation)
-            print(key, cast)
-            serialized_args['method'][key] = resolve_input_args(serialized_args['method'][key], cast, project)
-            serialized_args['method'][key] = cast(serialized_args['method'][key])
+            param_type = utils.resolve_annotation(param.annotation)
+            print(key, param_type)
+            serialized_args['method'][key] = resolve_input_args(serialized_args['method'][key], param_type, project)
+            deserializer = utils.get_deserializer(param_type)
+            if deserializer:
+                serialized_args['method'][key] = deserializer(serialized_args['method'][key])
+            else:
+                serialized_args['method'][key] = param_type(serialized_args['method'][key])
     
     print(serialized_args['method'])
     output = method(**serialized_args['method'])
