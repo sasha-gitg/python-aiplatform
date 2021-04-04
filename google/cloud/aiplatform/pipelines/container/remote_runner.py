@@ -116,7 +116,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cls_name", type=str)
     parser.add_argument("--method_name", type=str)
-    parser.add_argument("--resource_name_output_uri", type=str)
+    parser.add_argument("--resource_name_output_uri", type=str, default=None)
 
     args, unknown_args = parser.parse_known_args()
     kwargs = {}

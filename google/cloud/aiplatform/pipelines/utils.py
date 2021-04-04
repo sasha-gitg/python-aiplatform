@@ -59,6 +59,7 @@ def filter_signature(
         if param.name not in params_to_remove:
             # change resource name signatures to resource types
             # to enforce metadata entry
+            # ie: model_name -> model
             if is_init_signature and is_resource_name_parameter_name(param.name):
                 new_name = param.name[:-len('_name')]
                 new_params.append(inspect.Parameter(
@@ -118,8 +119,17 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
     init_arg_names = set(init_signature.parameters.keys()) if should_serialize_init else set([])
 
     output_type = shared_utils.resolve_annotation(method_signature.return_annotation)
+    outputs = ''
+    output_args = ''
     if output_type:
-        output_metadata_name, output_metadata_type = map_resource_to_metadata_type(output_type) 
+        output_metadata_name, output_metadata_type = map_resource_to_metadata_type(output_type)
+        outputs = '\n'.join([
+        'outputs:',
+        f'- {{name: {output_metadata_name}, type: {output_metadata_type}}}'])
+        output_args = '\n'.join([
+        '    - --resource_name_output_uri',
+        f'    - {{outputUri: {output_metadata_name}}}',
+        ])
 
     def make_args(sa):
         additional_args = []
@@ -182,18 +192,13 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
             init_signature.bind(**init_kwargs)
         method_signature.bind(**method_kwargs)
 
-        # TODO: add output as optional based on output_type
-        # should also add as default arg in remote runner
-        outputs = []
-
 
         inputs = "\n".join(inputs) if len(inputs) > 1 else ''
         input_args = "\n".join(input_args) if input_args else ''
         component_text = "\n".join([
         f'name: {cls_name}-{method_name}',
         f'{inputs}',
-        'outputs:',
-        f'- {{name: {output_metadata_name}, type: {output_metadata_type}}}',
+        outputs,
         'implementation:',
         '  container:',
         '    image: gcr.io/sashaproject-1/mb_sdk_component:latest',
@@ -204,8 +209,7 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
         f'    - --method_name={method_name}',
         f'{make_args(serialized_args)}',
         '    args:',
-        '    - --resource_name_output_uri',
-        f'    - {{outputUri: {output_metadata_name}}}',
+        output_args,
         f'{input_args}'
         ])
 

@@ -8,7 +8,6 @@ DatasetCreateOp = utils.convert_method_to_component(aiplatform.Dataset.create)
 # 	aiplatform.Dataset.export_data,
 # 	should_serialize_init=True)
 
-
 ImageDatasetCreateOp = utils.convert_method_to_component(
 	aiplatform.ImageDataset.create)
 
@@ -22,16 +21,16 @@ VideoDatasetCreateOp = utils.convert_method_to_component(
 	aiplatform.VideoDataset.create)
 
 # need to handle None return
-ImageDatasetImportOp = utils.convert_method_to_component(
+ImageDatasetImportDataOp = utils.convert_method_to_component(
 	aiplatform.ImageDataset.import_data, should_serialize_init=True)
 
-TabularDatasetImportOp = utils.convert_method_to_component(
+TabularDatasetImportDataOp = utils.convert_method_to_component(
 	aiplatform.TabularDataset.import_data, should_serialize_init=True)
 
-TextDatasetImportOp = utils.convert_method_to_component(
+TextDatasetImportDataOp = utils.convert_method_to_component(
 	aiplatform.TextDataset.import_data, should_serialize_init=True)
 
-VideoDatasetImportOp = utils.convert_method_to_component(
+VideoDatasetImportDataOp = utils.convert_method_to_component(
 	aiplatform.VideoDataset.import_data, should_serialize_init=True)
 
 # needs to handle optional outputs
@@ -59,9 +58,9 @@ ModelDeployOp = utils.convert_method_to_component(
 	aiplatform.Model.deploy,
 	should_serialize_init=True)
 
-# ModelBatchPredictOp = utils.convert_method_to_component(
-# 	aiplatform.Model.batch_predict,
-# 	should_serialize_init=True)
+ModelBatchPredictOp = utils.convert_method_to_component(
+	aiplatform.Model.batch_predict,
+	should_serialize_init=True)
 
 ModelUploadOp = utils.convert_method_to_component(
 	aiplatform.Model.upload)
