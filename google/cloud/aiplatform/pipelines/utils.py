@@ -162,10 +162,8 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
             param_type = shared_utils.resolve_annotation(param_type)
             serializer = shared_utils.get_serializer(param_type)
             if serializer:
-                print(serializer, param_type, value)
                 param_type = str
                 value = serializer(value)
-                print(value)
             
             # TODO: remove PipelineParam check when Metadata Importer component available
             # if we serialize we need to include the argument as input
@@ -185,7 +183,7 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
                         f'    - {{inputValue: {key}}}']))
                     input_kwargs[key] = value
             else:
-                serialized_args[prefix_key][key] = value
+                serialized_args[prefix_key][component_param_name_to_mb_sdk_param_name.get(key, key)] = value
 
         # validate parameters
         if should_serialize_init:
