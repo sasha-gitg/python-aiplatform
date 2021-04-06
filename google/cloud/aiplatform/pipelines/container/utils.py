@@ -1,3 +1,4 @@
+import collections
 import inspect
 import json
 from typing import Any, Callable, Optional, Tuple, Union
@@ -47,7 +48,7 @@ def resolve_annotation(annotation: Any) -> Any:
     if resolved_annotation:
         return resolved_annotation
 
-    # handle option types
+    # handle optional types
     if getattr(annotation, '__origin__', None) is Union:
         # assume optional type
         # TODO check for optional type
@@ -62,13 +63,23 @@ def resolve_annotation(annotation: Any) -> Any:
 
     return annotation
 
+def is_serializable_to_json(annotation: Any) -> bool:
+    serializable_types = (dict, list, collections.abc.Sequence)
+    return getattr(annotation, '__origin__', None) in serializable_types
+
+def is_mb_sdk_resource_noun_type(mb_sdk_type: Any) -> bool:
+    """Determines if type passed in should be a metadata type."""
+    if inspect.isclass(mb_sdk_type):
+        return issubclass(mb_sdk_type, aiplatform.base.AiPlatformResourceNoun)
+    return False
+
 def get_serializer(annotation: Any) -> Optional[Callable]:
     """Get serailizer for objects to pass them as strings.
     
     Remote runner will deserialize.
     # TODO handle proto.Message
     """ 
-    if getattr(annotation, '__origin__', None) in (dict, list):
+    if is_serializable_to_json(annotation):
         return json.dumps
 
 def get_deserializer(annotation: Any) -> Optional[Callable]:
@@ -77,5 +88,5 @@ def get_deserializer(annotation: Any) -> Optional[Callable]:
     Remote runner will deserialize.
     # TODO handle proto.Message
     """ 
-    if getattr(annotation, '__origin__', None) in (dict, list):
+    if is_serializable_to_json(annotation):
         return json.loads

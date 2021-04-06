@@ -1,12 +1,12 @@
 from google.cloud import aiplatform
 from google.cloud.aiplatform.pipelines import utils
 
-DatasetCreateOp = utils.convert_method_to_component(aiplatform.Dataset.create)
+DatasetCreateOp = utils.convert_method_to_component(
+	aiplatform.Dataset.create)
 
-# needs to handle sequence of string outputs
-# DatasetExportDataOp = utils.convert_method_to_component(
-# 	aiplatform.Dataset.export_data,
-# 	should_serialize_init=True)
+DatasetExportDataOp = utils.convert_method_to_component(
+	aiplatform.Dataset.export_data,
+	should_serialize_init=True)
 
 ImageDatasetCreateOp = utils.convert_method_to_component(
 	aiplatform.ImageDataset.create)
@@ -20,7 +20,6 @@ TextDatasetCreateOp = utils.convert_method_to_component(
 VideoDatasetCreateOp = utils.convert_method_to_component(
 	aiplatform.VideoDataset.create)
 
-# need to handle None return
 ImageDatasetImportDataOp = utils.convert_method_to_component(
 	aiplatform.ImageDataset.import_data, should_serialize_init=True)
 

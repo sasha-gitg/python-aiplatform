@@ -1,9 +1,12 @@
 import inspect
 import argparse
 import os
+import json
 from google.cloud import aiplatform
 from google.cloud import storage
 import utils
+from typing import Any
+from google.protobuf import json_format
 
 INIT_KEY = 'init'
 METHOD_KEY = 'method'
@@ -61,6 +64,17 @@ def resolve_init_args(key, value, project):
             value = read_from_gcs(project, value)
     return value
 
+def make_output(output_object: Any) -> str:
+    if utils.is_mb_sdk_resource_noun_type(type(output_object)):
+        return output_object.resource_name
+
+    # TODO: handle more default cases
+    # right now this is required for export data because proto Repeated
+    # this should be expanded to handle multiple different types
+    # or possibly export data should return a Dataset
+    return json.dumps(list(output_object))
+
+
 def runner(cls_name, method_name, resource_name_output_uri, kwargs):
     cls = getattr(aiplatform, cls_name)
 
@@ -103,12 +117,10 @@ def runner(cls_name, method_name, resource_name_output_uri, kwargs):
     
     print(serialized_args['method'])
     output = method(**serialized_args['method'])
+    print(output)
     
     if output:
-        write_to_gcs(
-            project,
-            resource_name_output_uri,
-            output.resource_name)
+        write_to_gcs(project, resource_name_output_uri, make_output(output))
         return output
 
 

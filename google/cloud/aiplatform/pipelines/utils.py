@@ -1,6 +1,5 @@
 import inspect
-import json
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Any, Callable, Tuple
 
 from google.cloud import aiplatform
 from google.cloud.aiplatform.pipelines.container import utils as shared_utils
@@ -19,34 +18,38 @@ resource_to_metadata_type = {
     aiplatform.BatchPredictionJob: "Artifact"
 }
 
-def map_resource_to_metadata_type(mb_sdk_type) -> Tuple[str, str]:
+
+def map_resource_to_metadata_type(mb_sdk_type: Any) -> Tuple[str, str]:
     """Maps an MB SDK type to the Metadata type.
 
     Returns:
         Tuple of component parameter name and metadata type.
         ie aiplatform.Model -> "model", "Model"  
     """
-    for key in resource_to_metadata_type.keys():
-        if issubclass(mb_sdk_type, key):
-            return key.__name__.split('.')[-1].lower(), resource_to_metadata_type[key]
+    if shared_utils.is_mb_sdk_resource_noun_type(mb_sdk_type):
+        for key in resource_to_metadata_type.keys():
+            if issubclass(mb_sdk_type, key):
+                return key.__name__.split('.')[-1].lower(), resource_to_metadata_type[key]
 
-def should_be_metadata_type(mb_sdk_type) -> bool:
-    """Determines if type passed in should be a metadata type."""
-    if inspect.isclass(mb_sdk_type):
-        return issubclass(mb_sdk_type, aiplatform.base.AiPlatformResourceNoun)
-    return False
+    print(mb_sdk_type)
+    if shared_utils.is_serializable_to_json(mb_sdk_type):
+        return "exported_dataset", "JsonArray" 
 
-def is_resource_name_parameter_name(param_name) -> bool:
+
+def is_resource_name_parameter_name(param_name: str) -> bool:
     """Determines if the mb_sdk parameter is a resource name."""
     return param_name != 'display_name' and param_name.endswith('_name')
 
+
 # These parameters are removed from MB SDK Methods
-params_to_remove = set(["self", "credentials", "sync"])
+params_to_remove = {"self", "credentials", "sync"}
+
+
 def filter_signature(
-    signature: inspect.Signature,
-    is_init_signature=False,
-    self_type=None,
-    component_param_name_to_mb_sdk_param_name=None):
+        signature: inspect.Signature,
+        is_init_signature=False,
+        self_type=None,
+        component_param_name_to_mb_sdk_param_name=None):
     """Removes unused params from signature.
 
     Args:
@@ -72,8 +75,9 @@ def filter_signature(
                 new_params.append(param)
 
     return inspect.Signature(
-        parameters=new_params, 
+        parameters=new_params,
         return_annotation=signature.return_annotation)
+
 
 def get_parameter_type(signature: inspect.Signature, param_name) -> Any:
     """Returns the expected type of the input parameter.
@@ -87,6 +91,19 @@ def get_parameter_type(signature: inspect.Signature, param_name) -> Any:
     # TODO(handle Union types)
     # TODO(handle Forward references)
     return signature.parameters[param_name].annotation
+
+
+def signatures_union(
+    init_sig: inspect.Signature, method_sig: inspect.Signature) -> inspect.Signature:
+    """Returns a Union of the constructor and method signature.
+    """
+    def key(param):
+        if param.default is inspect._empty:
+            return -1
+        return 1
+    params = list(init_sig.parameters.values()) + list(method_sig.parameters.values())
+    params.sort(key=key)
+    return inspect.Signature(parameters=params, return_annotation=method_sig.return_annotation)
 
 
 def convert_method_to_component(method: Callable, should_serialize_init=False):
@@ -108,13 +125,13 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
     # this is generally used for constructor where the mb sdk takes
     # a resource name but the component takes a metadata entry
     # ie: model: system.Model -> model_name: str
-    component_param_name_to_mb_sdk_param_name ={}
+    component_param_name_to_mb_sdk_param_name = {}
     # remove unused parameters
     method_signature = filter_signature(method_signature)
     init_signature = filter_signature(init_signature,
-        is_init_signature=True,
-        self_type=cls,
-        component_param_name_to_mb_sdk_param_name=component_param_name_to_mb_sdk_param_name)
+                                      is_init_signature=True,
+                                      self_type=cls,
+                                      component_param_name_to_mb_sdk_param_name=component_param_name_to_mb_sdk_param_name)
 
     init_arg_names = set(init_signature.parameters.keys()) if should_serialize_init else set([])
 
@@ -124,11 +141,11 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
     if output_type:
         output_metadata_name, output_metadata_type = map_resource_to_metadata_type(output_type)
         outputs = '\n'.join([
-        'outputs:',
-        f'- {{name: {output_metadata_name}, type: {output_metadata_type}}}'])
+            'outputs:',
+            f'- {{name: {output_metadata_name}, type: {output_metadata_type}}}'])
         output_args = '\n'.join([
-        '    - --resource_name_output_uri',
-        f'    - {{outputUri: {output_metadata_name}}}',
+            '    - --resource_name_output_uri',
+            f'    - {{outputUri: {output_metadata_name}}}',
         ])
 
     def make_args(sa):
@@ -157,19 +174,19 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
                 prefix_key = METHOD_KEY
                 method_kwargs[key] = value
                 signature = method_signature
-            
+
             param_type = get_parameter_type(signature, key)
             param_type = shared_utils.resolve_annotation(param_type)
             serializer = shared_utils.get_serializer(param_type)
             if serializer:
                 param_type = str
                 value = serializer(value)
-            
+
             # TODO: remove PipelineParam check when Metadata Importer component available
             # if we serialize we need to include the argument as input
             # perhaps, another option is to embed in yaml as json seralized list 
             if isinstance(value, kfp.dsl._pipeline_param.PipelineParam) or serializer:
-                if should_be_metadata_type(param_type):  
+                if shared_utils.is_mb_sdk_resource_noun_type(param_type):
                     metadata_type = map_resource_to_metadata_type(param_type)[1]
                     inputs.append(f"- {{name: {key}, type: {metadata_type}}}")
                     input_args.append('\n'.join([
@@ -190,25 +207,24 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
             init_signature.bind(**init_kwargs)
         method_signature.bind(**method_kwargs)
 
-
         inputs = "\n".join(inputs) if len(inputs) > 1 else ''
         input_args = "\n".join(input_args) if input_args else ''
         component_text = "\n".join([
-        f'name: {cls_name}-{method_name}',
-        f'{inputs}',
-        outputs,
-        'implementation:',
-        '  container:',
-        '    image: gcr.io/sashaproject-1/mb_sdk_component:latest',
-        '    command:',
-        '    - python3',
-        '    - remote_runner.py',
-        f'    - --cls_name={cls_name}',
-        f'    - --method_name={method_name}',
-        f'{make_args(serialized_args)}',
-        '    args:',
-        output_args,
-        f'{input_args}'
+            f'name: {cls_name}-{method_name}',
+            f'{inputs}',
+            outputs,
+            'implementation:',
+            '  container:',
+            '    image: gcr.io/sashaproject-1/mb_sdk_component:latest',
+            '    command:',
+            '    - python3',
+            '    - remote_runner.py',
+            f'    - --cls_name={cls_name}',
+            f'    - --method_name={method_name}',
+            f'{make_args(serialized_args)}',
+            '    args:',
+            output_args,
+            f'{input_args}'
         ])
 
         print(component_text)
@@ -216,6 +232,6 @@ def convert_method_to_component(method: Callable, should_serialize_init=False):
         return components.load_component_from_text(component_text)(**input_kwargs)
 
     f.__doc__ = method.__doc__
-    f.__signature__ = method_signature
+    f.__signature__ = signatures_union(init_signature, method_signature) if should_serialize_init else method_signature
 
     return f
