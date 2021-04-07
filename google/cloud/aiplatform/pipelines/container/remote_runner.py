@@ -1,32 +1,42 @@
-import inspect
 import argparse
-import os
+import inspect
 import json
+import os
+from typing import Any, Dict, Tuple
+
 from google.cloud import aiplatform
 from google.cloud import storage
 import utils
-from typing import Any
-from google.protobuf import json_format
+
 
 INIT_KEY = 'init'
 METHOD_KEY = 'method'
 
-def split_args(kwargs):
+# TODO() Add type-hinting the functions
+# TODO() Add explanation / exmaples and validation for kwargs
+def split_args(kwargs: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Splits args into constructor and method args.
+
+    Args:
+        kwargs: kwargs with parameter names preprended with init or method
+    Returns:
+        constructor kwargs, method kwargs
+    """
     init_args = {}
     method_args = {}
-    config_args = {}
     
     for key, arg in kwargs.items():
         if key.startswith(INIT_KEY):
             init_args[key.split(".")[-1]] = arg
         elif key.startswith(METHOD_KEY):
             method_args[key.split(".")[-1]] = arg
-        else:
-            config_args[key.split(".")[-1]] = arg
     
-    return init_args, method_args, config_args
+    return init_args, method_args
 
 def write_to_gcs(project, gcs_uri, text):
+    """helper method to write to gcs
+    TODO: remove and use native support from Pipeline
+    """
     gcs_uri = gcs_uri[5:]
     gcs_bucket, gcs_blob = gcs_uri.split('/', 1)
     
@@ -39,6 +49,9 @@ def write_to_gcs(project, gcs_uri, text):
     blob.upload_from_filename('resource_name.txt')
 
 def read_from_gcs(project, gcs_uri):
+    """helper method to read from gcs
+    TODO: remove and use native support from Pipelines
+    """
     gcs_uri = gcs_uri[5:]
     gcs_bucket, gcs_blob = gcs_uri.split('/', 1)
     client = storage.Client(project=project)
@@ -47,7 +60,9 @@ def read_from_gcs(project, gcs_uri):
     resource_name = blob.download_as_string().decode('utf-8')
     return resource_name
 
-def resolve_project(serialized_args):
+def resolve_project(serialized_args: Dict[Dict[str, Any]]) -> str:
+    """Gets the project from either constructor or method.
+    """
     return serialized_args['init'].get('project', serialized_args['method'].get('project'))
 
 def resolve_input_args(value, _type, project):
@@ -78,7 +93,7 @@ def make_output(output_object: Any) -> str:
 def runner(cls_name, method_name, resource_name_output_uri, kwargs):
     cls = getattr(aiplatform, cls_name)
 
-    init_args, method_args, config_args = split_args(kwargs)
+    init_args, method_args = split_args(kwargs)
 
     serialized_args = {
         'init': init_args,

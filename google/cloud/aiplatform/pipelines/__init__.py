@@ -32,10 +32,13 @@ TextDatasetImportDataOp = utils.convert_method_to_component(
 VideoDatasetImportDataOp = utils.convert_method_to_component(
 	aiplatform.VideoDataset.import_data, should_serialize_init=True)
 
-# needs to handle optional outputs
-# CustomContainerTrainingJobRunOp = utils.convert_method_to_component(
-# 	aiplatform.CustomContainerTrainingJob.run,
-#     should_serialize_init=True)
+CustomContainerTrainingJobRunOp = utils.convert_method_to_component(
+	aiplatform.CustomContainerTrainingJob.run,
+    should_serialize_init=True)
+
+CustomPythonPackageTrainingJobRunOp = utils.convert_method_to_component(
+	aiplatform.CustomPythonPackageTrainingJob.run,
+    should_serialize_init=True)
 
 AutoMLImageTrainingJobRunOp = utils.convert_method_to_component(
 	aiplatform.AutoMLImageTrainingJob.run,
