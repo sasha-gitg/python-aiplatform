@@ -11,7 +11,7 @@ INIT_KEY = 'init'
 METHOD_KEY = 'method'
 
 # map of MB SDK type to Metadata type
-resource_to_metadata_type = {
+RESOURCE_TO_METADATA_TYPE = {
     aiplatform.Dataset: "Dataset",
     aiplatform.Model: "Model",
     aiplatform.Endpoint: "Artifact",
@@ -19,21 +19,24 @@ resource_to_metadata_type = {
 }
 
 
-def map_resource_to_metadata_type(mb_sdk_type: Any) -> Tuple[str, str]:
-    """Maps an MB SDK type to the Metadata type.
+def map_resource_to_metadata_type(mb_sdk_type: aiplatform.base.AiPlatformResourceNoun) -> Tuple[str, str]:
+    """Maps an MB SDK type to Metadata type.
 
     Returns:
         Tuple of component parameter name and metadata type.
-        ie aiplatform.Model -> "model", "Model"  
+        ie aiplatform.Model -> "model", "Model"
     """
-    if shared_utils.is_mb_sdk_resource_noun_type(mb_sdk_type):
-        for key in resource_to_metadata_type.keys():
-            if issubclass(mb_sdk_type, key):
-                return key.__name__.split('.')[-1].lower(), resource_to_metadata_type[key]
+    # type should always be in this map
+    for key in RESOURCE_TO_METADATA_TYPE.keys():
+        if issubclass(mb_sdk_type, key):
+            return key.__name__.split('.')[-1].lower(), RESOURCE_TO_METADATA_TYPE[key]
 
-    print(mb_sdk_type)
-    if shared_utils.is_serializable_to_json(mb_sdk_type):
-        return "exported_dataset", "JsonArray" 
+
+def should_be_metadata_type(mb_sdk_type: Any) -> bool:
+    """Determines if type passed in should be a metadata type."""
+    if inspect.isclass(mb_sdk_type):
+        return issubclass(mb_sdk_type, aiplatform.base.AiPlatformResourceNoun)
+    return False
 
 
 def is_resource_name_parameter_name(param_name: str) -> bool:
@@ -42,24 +45,28 @@ def is_resource_name_parameter_name(param_name: str) -> bool:
 
 
 # These parameters are removed from MB SDK Methods
-params_to_remove = {"self", "credentials", "sync"}
-
-
+PARAMS_TO_REMOVE = {"self", "credentials", "sync"}
 def filter_signature(
         signature: inspect.Signature,
-        is_init_signature=False,
-        self_type=None,
-        component_param_name_to_mb_sdk_param_name=None):
+        is_init_signature: bool=False,
+        self_type: Optional[aiplatform.base.AiPlatformResourceNoun]=None,
+        component_param_name_to_mb_sdk_param_name: dict[str, str]=None) -> inspect.Signature:
     """Removes unused params from signature.
 
     Args:
-        signature (inspect.Signature) Model Builder SDK Method Signature.
+        signature (inspect.Signature): Model Builder SDK Method Signature.
+        is_init_signature (bool): is this constructor signature
+        self_type (aiplatform.base.AiPlatformResourceNoun): This is used to replace *_name str fields with resource
+            name type
+        component_param_name_to_mb_sdk_param_name dict[str, str]: Mapping to keep track of param names changed
+            to make them component friendly( ie: model_name -> model)
+
     Returns:
-        Signature with parameters removed. 
+        Signature appropriate for component creation.
     """
     new_params = []
     for param in signature.parameters.values():
-        if param.name not in params_to_remove:
+        if param.name not in PARAMS_TO_REMOVE:
             # change resource name signatures to resource types
             # to enforce metadata entry
             # ie: model_name -> model
@@ -79,14 +86,14 @@ def filter_signature(
         return_annotation=signature.return_annotation)
 
 
-def get_parameter_type(signature: inspect.Signature, param_name) -> Any:
+def get_parameter_type(signature: inspect.Signature, param_name: str) -> Any:
     """Returns the expected type of the input parameter.
 
     Args:
         signature (inspect.Signature): Model Builder SDK Method Signature.
         param_name (str): Name of parameter to get type
     Returns:
-        Signature with parameters removed. 
+        Signature with parameters removed.
     """
     # TODO(handle Union types)
     # TODO(handle Forward references)
