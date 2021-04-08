@@ -240,7 +240,6 @@ def convert_method_to_component(method: Callable, should_serialize_init:bool=Fal
         method_kwargs = {}
 
         for key, value in kwargs.items():
-            print(key, value)
             if key in init_arg_names:
                 prefix_key = INIT_KEY
                 init_kwargs[key] = value
@@ -268,7 +267,6 @@ def convert_method_to_component(method: Callable, should_serialize_init:bool=Fal
                 else:
                     component_param_type, component_type = 'String', 'inputValue'
 
-                print(key, component_param_type, component_type, value)
                 inputs.append(f"- {{name: {key}, type: {component_param_type}}}")
                 input_args.append('\n'.join([
                     f'    - --{prefix_key}.{component_param_name}',
@@ -277,8 +275,6 @@ def convert_method_to_component(method: Callable, should_serialize_init:bool=Fal
             else:
                 serialized_args[prefix_key][component_param_name] = value
 
-        print(input_kwargs)
-        print(serialized_args)
         # validate parameters
         if should_serialize_init:
             init_signature.bind(**init_kwargs)
