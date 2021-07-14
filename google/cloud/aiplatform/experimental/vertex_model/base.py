@@ -44,6 +44,7 @@ from google.auth import credentials as auth_credentials
 from google.cloud.aiplatform import initializer
 from google.cloud.aiplatform import utils
 from google.cloud.aiplatform.compat.types import encryption_spec as gca_encryption_spec
+from google.cloud import aiplatform
 
 
 class VertexModel:
@@ -53,17 +54,42 @@ class VertexModel:
     }
 
     # Default to local training on creation, at least for this prototype.
-    self.training_mode = 'local'
 
-    """ Parent class that users can extend to use the Vertex AI SDK """
+    """ Parent class that users can extend to use the Vertex AI SDK
+    
+    class MyModel(VertexModel):
+    
+        def __init__(self):
+            super().__init__()
+            
+        def fit(self):
+            print('my_fit')
+    
+    my_model = VertexModel()
+    
+    my_model.training_mode = 'cloud'
+    my_model.training_mode = 'local'
+    
+    """
+    
+    
+    
     def __init__(self):
-        if self.training_mode == 'cloud':
-            self.fit = vertex_function_wrapper(self.fit)
-            self.predict = vertex_function_wrapper(self.predict)
-            self.batch_predict = vertex_function_wrapper(self.batch_predict)
-            self.eval = vertex_function_wrapper(self.eval)
+        self.training_mode = 'local'
+        
+        # if self.training_mode == 'cloud':
+        
+        # ensure self.fit is referencing subclass' MyModel.fit instead of VertexModel.fit (abcmethod)
+        # print(self) __main__.MyModel
+        # print(inspect.getsource(self.fit))
+        self.fit = vertex_function_wrapper(self.fit)
+        self.predict = vertex_function_wrapper(self.predict)
+        self.batch_predict = vertex_function_wrapper(self.batch_predict)
+        self.eval = vertex_function_wrapper(self.eval)
 
-    def serialize_data_in_memory(self, artifact_uri, obj: pd.Dataframe, temp_dir: str, dataset_type: str):
+    # capture as another class and reference that class
+    #  make serialization private to signal to the customer to not use this method
+    def _serialize_data_in_memory(self, artifact_uri, obj: pd.Dataframe, temp_dir: str, dataset_type: str):
         """ Provides out-of-the-box serialization for input """
 
         # Designate csv path and write the pandas DataFrame to the path
@@ -191,8 +217,11 @@ class VertexModel:
         def f(*args, **kwargs):
             dataset = kwargs['dataset']
 
+            # serializing parameters (data) to the method
             serializer = fit_method.__self__.__class__._data_serialization_mapping[type(dataset)][1]
             serializer(dataset, staging_bucket + 'dataset.csv', args[1], '~/temp_dir', 'training')
+            
+            # serialize the code in the class to be packaged and copied to GCS (as separate class)
 
             """            
             # Edit run of job here?
@@ -205,10 +234,62 @@ class VertexModel:
 
         if (fit_method.__name__ == 'fit'):
             f(inspect.signature(fit_method))
+           
 
         # TODO: wrapper for predict and/or eval (could be the same function)
 
         # def p(*args, **kwargs):
         
         
+# Source example
+import pandas
 
+class Model:
+    
+    def __init__(self):
+        self.x = 10
+        
+    def f(self):
+        print(pandas.DataFrame)
+
+m = Model()
+
+m.f()
+
+m.x
+
+import inspect
+
+m.__class__
+
+class SourceMaker:
+    
+    def __init__(self, cls_name: str):
+        self.source = ["class {}".format(cls_name)]
+        
+    def add_method(self, method_str: str):
+        self.source.extend(method_str.split('\n'))
+        
+    # add a method
+    # append "m = Model() \nm.fit"
+        
+
+
+def make_class_source(obj):
+    source_maker = SourceMaker(obj.__class__.__name__)
+    
+    for key, value in inspect.getmembers(m):
+        #print(key, value)
+        if inspect.ismethod(value): 
+            source_maker.add_method(inspect.getsource(value))
+    return source_maker.source
+
+print('\n'.join(make_class_source(m)))
+
+inspect.getsource(m.f).split('\n')
+
+class A(dict):
+    pass
+
+# will get superclasses
+inspect.getmro(A)
