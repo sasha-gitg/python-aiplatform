@@ -330,6 +330,7 @@ class BatchPredictionJob(_Job):
 
         This is only available for batch predicition jobs that have run successfully.
         """
+        self._assert_gca_resource_is_available()
         return self._gca_resource.output_info
 
     @property
@@ -337,11 +338,13 @@ class BatchPredictionJob(_Job):
         """Partial failures encountered. For example, single files that can't be read.
         This field never exceeds 20 entries. Status details fields contain standard
         GCP error details."""
+        self._assert_gca_resource_is_available()
         return getattr(self._gca_resource, "partial_failures")
 
     @property
     def completion_stats(self) -> Optional[gca_completion_stats.CompletionStats]:
         """Statistics on completed and failed prediction instances."""
+        self._assert_gca_resource_is_available()
         return getattr(self._gca_resource, "completion_stats")
 
     @classmethod
@@ -772,6 +775,8 @@ class BatchPredictionJob(_Job):
                 GCS or BQ output provided.
         """
 
+        self._assert_gca_resource_is_available()
+
         if self.state != gca_job_state.JobState.JOB_STATE_SUCCEEDED:
             raise RuntimeError(
                 f"Cannot read outputs until BatchPredictionJob has succeeded, "
@@ -855,26 +860,15 @@ class _RunnableJob(_Job):
             project=project, location=location
         )
 
+    def _assert_gca_resource_is_available(self):
+        if not getattr(self._gca_resource, 'name', None):
+            raise RuntimeError(f"{self.__class__} resource has not been created." +
+                (f" Resource failed with: {self._exception}" if self._exception else
+                    "  To wait for resource creation use wait_for_resource_creation."))
+
     @abc.abstractmethod
     def run(self) -> None:
         pass
-
-    @property
-    def _has_run(self) -> bool:
-        """Property returns true if this class has a resource name."""
-        return bool(self._gca_resource.name)
-
-    @property
-    def state(self) -> gca_job_state.JobState:
-        """Current state of job.
-
-        Raises:
-            RuntimeError if job run has not been called.
-        """
-        if not self._has_run:
-            raise RuntimeError("Job has not run. No state available.")
-
-        return super().state
 
     @classmethod
     def get(
@@ -1041,6 +1035,7 @@ class CustomJob(_RunnableJob):
         Private services access must already be configured for the network. If left
         unspecified, the CustomJob is not peered with any network.
         """
+        self._assert_gca_resource_is_available()
         return getattr(self._gca_resource, "network")
 
     @classmethod
@@ -1512,6 +1507,7 @@ class HyperparameterTuningJob(_RunnableJob):
         Private services access must already be configured for the network. If left
         unspecified, the HyperparameterTuningJob is not peered with any network.
         """
+        self._assert_gca_resource_is_available()
         return getattr(self._gca_resource.trial_job_spec, "network")
 
     @base.optional_sync()
@@ -1612,4 +1608,5 @@ class HyperparameterTuningJob(_RunnableJob):
 
     @property
     def trials(self) -> List[gca_study_compat.Trial]:
+        self._assert_gca_resource_is_available()
         return list(self._gca_resource.trials)
