@@ -15,9 +15,13 @@
 # limitations under the License.
 #
 
+import pprint
 from typing import Optional, Dict, Sequence
 
+from google.protobuf import json_format
 import proto
+
+
 
 from google.cloud.aiplatform import utils
 from google.cloud.aiplatform.metadata.resource import _Resource
@@ -108,3 +112,32 @@ class _Context(_Resource):
 
         list_request = ListContextsRequest(parent=parent, filter=filter,)
         return client.list_contexts(request=list_request)
+
+    def _get_lineage_subgraph(self):
+        self._lineage_subgraph = self.api_client.query_context_lineage_subgraph(
+            context=self.resource_name)
+
+    def  visualize_lineage(self):
+        if not getattr(self, '_lineage_subgraph', None):
+            self._get_lineage_subgraph()
+
+        def node_label(node, keys):
+            return json_format.MessageToJson(node._pb)
+            d = json_format.MessageToDict(node._pb)
+            return pprint.pformat({key: d[key] for key in keys})
+
+        from pyvis.network import Network
+        net = Network(height='1000px', width='1000px', notebook=True, physics=False)
+
+        keys = ['uri', 'displayName', 'schemaTitle', 'name']
+        for artifact in self._lineage_subgraph.artifacts:
+            resource_id = artifact.name.split('/')[-1]
+
+
+            net.add_node(resource_id, label=node_label(artifact, keys), shape='box')
+
+
+        return net.show('nodes.html')
+
+
+

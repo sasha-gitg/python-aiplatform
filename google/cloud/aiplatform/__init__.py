@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+from google.cloud.speech_v1 import *
 from google.cloud.aiplatform import gapic
 from google.cloud.aiplatform import explain
 
