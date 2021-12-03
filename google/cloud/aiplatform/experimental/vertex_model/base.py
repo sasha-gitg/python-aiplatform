@@ -19,8 +19,8 @@ import abc
 import datetime
 import functools
 import inspect
-
 import pathlib
+import os
 import tempfile
 from typing import Any
 from typing import List
@@ -33,7 +33,22 @@ from google.cloud.aiplatform.experimental.vertex_model.utils import source_utils
 
 _LOGGER = base.Logger(__name__)
 
-GITHUB_DEPENDENCY = "google-cloud-aiplatform @ git+https://github.com/googleapis/python-aiplatform@refs/pull/686/head#egg=google-cloud-aiplatform"
+
+# base uri to fore installing from a PR
+VERTEX_SDK_GITHUB_BASE_URI = 'https://github.com/googleapis/python-aiplatform@{ref}#egg=google-cloud-aiplatform'
+
+# will default to use kokoro build pr
+# when developing set env var VERTEX_MODEL_DEV_REF with PR or commit id in googleapis/python-aiplatform
+# for example refs/pull/686/head
+VERTEX_SDK_REF = os.environ.get('KOKORO_GIT_COMMIT', os.environ.get('VERTEX_MODEL_DEV_REF'))
+
+if VERTEX_SDK_REF:
+    DEV_REMOTE_SDK_REFERENCE = VERTEX_SDK_GITHUB_BASE_URI.format(ref=VERTEX_SDK_REF)
+    VERTEX_SDK_DEPENDENCY = f"google-cloud-aiplatform @ git+{DEV_REMOTE_SDK_REFERENCE}"
+else:
+    VERTEX_SDK_DEPENDENCY = 'google-cloud-aiplatform=={}'.format(aiplatform.__version__)
+
+
 
 SERVING_COMMAND_STRING_CLI_FIRST_HALF = [
     "sh",
@@ -43,7 +58,7 @@ SERVING_COMMAND_STRING_CLI_FIRST_HALF = [
 SERVING_COMMAND_STRING_CLI_PIP_CALL = (
     "python3 -m pip install --user --disable-pip-version-check 'uvicorn' 'fastapi' "
 )
-SERVING_COMMAND_STRING_CLI_GITHUB_INSTALL = f' \'{GITHUB_DEPENDENCY}\' && "$0" "$@"'
+SERVING_COMMAND_STRING_CLI_GITHUB_INSTALL = f' \'{VERTEX_SDK_DEPENDENCY}\' && "$0" "$@"'
 
 SERVING_COMMAND_STRING_CLI_SECOND_HALF = [
     "sh",
@@ -228,12 +243,12 @@ def vertex_fit_function_wrapper(method: Callable[..., Any]):
 
             # Account for user-designated dependencies when
             # setting up remote prediction
-            if GITHUB_DEPENDENCY not in obj.dependencies:
-                obj.dependencies.append(GITHUB_DEPENDENCY)
+            if VERTEX_SDK_DEPENDENCY not in obj.dependencies:
+                obj.dependencies.append(VERTEX_SDK_DEPENDENCY)
 
             dependency_installs = []
             for dependency in obj.dependencies:
-                if dependency != GITHUB_DEPENDENCY:
+                if dependency != VERTEX_SDK_DEPENDENCY:
                     dependency_name = f"'{dependency}'"
                     dependency_installs.append(dependency_name)
 
@@ -360,7 +375,7 @@ def vertex_predict_function_wrapper(method: Callable[..., Any]):
 
             dependency_installs = []
             for dependency in obj.dependencies:
-                if dependency != GITHUB_DEPENDENCY:
+                if dependency != VERTEX_SDK_DEPENDENCY:
                     dependency_name = f"'{dependency}'"
                     dependency_installs.append(dependency_name)
 
@@ -426,7 +441,7 @@ class VertexModel(metaclass=abc.ABCMeta):
     dependencies = [
         "pandas>=1.3",
         "torch>=1.7",
-        GITHUB_DEPENDENCY,
+        VERTEX_SDK_DEPENDENCY,
     ]
 
     def __init__(self, *args, **kwargs):
