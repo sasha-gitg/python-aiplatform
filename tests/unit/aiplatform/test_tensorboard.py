@@ -1025,7 +1025,8 @@ class TestTensorboardTimeSeries:
         )
 
     def test_create_tensorboard_time_series(
-        self, create_tensorboard_time_series_mock, get_tensorboard_time_series_mock
+        self,
+        create_tensorboard_time_series_mock,
     ):
 
         aiplatform.init(
@@ -1046,10 +1047,6 @@ class TestTensorboardTimeSeries:
         create_tensorboard_time_series_mock.assert_called_once_with(
             parent=_TEST_TENSORBOARD_RUN_NAME,
             tensorboard_time_series=expected_tensorboard_time_series,
-        )
-
-        get_tensorboard_time_series_mock.assert_called_once_with(
-            name=_TEST_TENSORBOARD_TIME_SERIES_NAME, retry=base._DEFAULT_RETRY
         )
 
     @pytest.mark.usefixtures("get_tensorboard_time_series_mock")
