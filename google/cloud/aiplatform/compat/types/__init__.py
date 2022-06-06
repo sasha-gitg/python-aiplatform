@@ -46,8 +46,8 @@ from google.cloud.aiplatform_v1beta1.types import (
     featurestore_monitoring as featurestore_monitoring_v1beta1,
     featurestore_online_service as featurestore_online_service_v1beta1,
     featurestore_service as featurestore_service_v1beta1,
-    index as matching_engine_index_v1beta1,
-    index_endpoint as matching_engine_index_endpoint_v1beta1,
+    index as index_v1beta1,
+    index_endpoint as index_endpoint_v1beta1,
     hyperparameter_tuning_job as hyperparameter_tuning_job_v1beta1,
     io as io_v1beta1,
     job_service as job_service_v1beta1,
@@ -77,6 +77,7 @@ from google.cloud.aiplatform_v1beta1.types import (
     tensorboard_service as tensorboard_service_v1beta1,
     tensorboard_time_series as tensorboard_time_series_v1beta1,
     training_pipeline as training_pipeline_v1beta1,
+    types as types_v1beta1,
 )
 from google.cloud.aiplatform_v1.types import (
     accelerator_type as accelerator_type_v1,
@@ -109,8 +110,8 @@ from google.cloud.aiplatform_v1.types import (
     featurestore_online_service as featurestore_online_service_v1,
     featurestore_service as featurestore_service_v1,
     hyperparameter_tuning_job as hyperparameter_tuning_job_v1,
-    index as matching_engine_index_v1,
-    index_endpoint as matching_engine_index_endpoint_v1,
+    index as index_v1,
+    index_endpoint as index_endpoint_v1,
     io as io_v1,
     job_service as job_service_v1,
     job_state as job_state_v1,
@@ -139,6 +140,7 @@ from google.cloud.aiplatform_v1.types import (
     tensorboard_service as tensorboard_service_v1,
     tensorboard_time_series as tensorboard_time_series_v1,
     training_pipeline as training_pipeline_v1,
+    types as types_v1,
 )
 
 __all__ = (
@@ -179,8 +181,8 @@ __all__ = (
     machine_resources_v1,
     manual_batch_tuning_parameters_v1,
     matching_engine_deployed_index_ref_v1,
-    matching_engine_index_v1,
-    matching_engine_index_endpoint_v1,
+    index_v1,
+    index_endpoint_v1,
     metadata_service_v1,
     metadata_schema_v1,
     metadata_store_v1,
@@ -202,6 +204,7 @@ __all__ = (
     tensorboard_service_v1,
     tensorboard_time_series_v1,
     training_pipeline_v1,
+    types_v1,
     # v1beta1
     accelerator_type_v1beta1,
     annotation_v1beta1,
@@ -240,8 +243,8 @@ __all__ = (
     machine_resources_v1beta1,
     manual_batch_tuning_parameters_v1beta1,
     matching_engine_deployed_index_ref_v1beta1,
-    matching_engine_index_v1beta1,
-    matching_engine_index_endpoint_v1beta1,
+    index_v1beta1,
+    index_endpoint_v1beta1,
     metadata_service_v1beta1,
     metadata_schema_v1beta1,
     metadata_store_v1beta1,
@@ -263,4 +266,5 @@ __all__ = (
     tensorboard_service_v1beta1,
     tensorboard_time_series_v1beta1,
     training_pipeline_v1beta1,
+    types_v1beta1,
 )

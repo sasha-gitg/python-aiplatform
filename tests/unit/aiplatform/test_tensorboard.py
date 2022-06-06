@@ -33,11 +33,11 @@ from google.cloud.aiplatform import initializer
 from google.cloud.aiplatform import tensorboard
 from google.cloud.aiplatform import utils
 
-from google.cloud.aiplatform_v1.services.tensorboard_service import (
-    client as tensorboard_service_client,
+from google.cloud.aiplatform.compat.services import (
+    tensorboard_service_client,
 )
 
-from google.cloud.aiplatform_v1.types import (
+from google.cloud.aiplatform.compat.types import (
     encryption_spec as gca_encryption_spec,
     tensorboard as gca_tensorboard,
     tensorboard_data as gca_tensorboard_data,
@@ -358,6 +358,7 @@ def batch_read_tensorboard_time_series_mock():
         yield batch_read_tensorboard_time_series_data_mock
 
 
+@pytest.mark.usefixtures("google_auth_mock")
 class TestTensorboard:
     def setup_method(self):
         reload(initializer)
@@ -759,20 +760,15 @@ class TestTensorboardRun:
     def teardown_method(self):
         initializer.global_pool.shutdown(wait=True)
 
-    def test_init_tensorboard_run(
-        self, get_tensorboard_run_mock, list_tensorboard_time_series_mock
-    ):
+    def test_init_tensorboard_run(self, get_tensorboard_run_mock):
         aiplatform.init(project=_TEST_PROJECT)
         tensorboard.TensorboardRun(tensorboard_run_name=_TEST_TENSORBOARD_RUN_NAME)
         get_tensorboard_run_mock.assert_called_once_with(
             name=_TEST_TENSORBOARD_RUN_NAME, retry=base._DEFAULT_RETRY
         )
-        list_tensorboard_time_series_mock.assert_called_once_with(
-            request={"parent": _TEST_TENSORBOARD_RUN_NAME, "filter": None}
-        )
 
     def test_init_tensorboard_run_with_tensorboard_and_experiment(
-        self, get_tensorboard_run_mock, list_tensorboard_time_series_mock
+        self, get_tensorboard_run_mock
     ):
         aiplatform.init(project=_TEST_PROJECT)
         tensorboard.TensorboardRun(
@@ -783,12 +779,9 @@ class TestTensorboardRun:
         get_tensorboard_run_mock.assert_called_once_with(
             name=_TEST_TENSORBOARD_RUN_NAME, retry=base._DEFAULT_RETRY
         )
-        list_tensorboard_time_series_mock.assert_called_once_with(
-            request={"parent": _TEST_TENSORBOARD_RUN_NAME, "filter": None}
-        )
 
     def test_init_tensorboard_run_with_id_only_with_project_and_location(
-        self, get_tensorboard_run_mock, list_tensorboard_time_series_mock
+        self, get_tensorboard_run_mock
     ):
         aiplatform.init(project=_TEST_PROJECT)
         tensorboard.TensorboardRun(
@@ -889,7 +882,6 @@ class TestTensorboardRun:
             timeout=None,
         )
 
-    @pytest.mark.usefixtures("get_tensorboard_run_mock")
     @pytest.mark.usefixtures(
         "get_tensorboard_run_mock", "list_tensorboard_time_series_mock"
     )
@@ -983,30 +975,6 @@ class TestTensorboardRun:
         )
 
         assert ts_data == true_ts_data
-
-        # timestamp = utils.get_timestamp_proto()
-        # tb_run.write_tensorboard_scalar_data(
-        #     time_series_data={"accuracy": 0.9}, step=1, wall_time=timestamp
-        # )
-        #
-        # expected_time_series_data = [
-        #     gca_tensorboard_data.TimeSeriesData(
-        #         tensorboard_time_series_id=_TEST_TENSORBOARD_TIME_SERIES_ID,
-        #         value_type=gca_tensorboard_time_series.TensorboardTimeSeries.ValueType.SCALAR,
-        #         values=[
-        #             gca_tensorboard_data.TimeSeriesDataPoint(
-        #                 scalar=gca_tensorboard_data.Scalar(value=0.9),
-        #                 wall_time=timestamp,
-        #                 step=1,
-        #             )
-        #         ],
-        #     ),
-        # ]
-        #
-        # write_tensorboard_run_data_mock.assert_called_once_with(
-        #     tensorboard_run=_TEST_TENSORBOARD_RUN_NAME,
-        #     time_series_data=expected_time_series_data,
-        # )
 
 
 class TestTensorboardTimeSeries:
