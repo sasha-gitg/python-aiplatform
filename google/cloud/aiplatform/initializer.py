@@ -111,9 +111,9 @@ class _Config:
         if (project and project != self._project) or (
             location and location != self._location
         ):
-            if metadata.experiment_tracker.experiment_name:
+            if metadata._experiment_tracker.experiment_name:
                 logging.info("project/location updated, reset Experiment config.")
-            metadata.experiment_tracker.reset()
+            metadata._experiment_tracker.reset()
 
         if project:
             self._project = project
@@ -128,7 +128,7 @@ class _Config:
             self._encryption_spec_key_name = encryption_spec_key_name
 
         if experiment:
-            metadata.experiment_tracker.set_experiment(
+            metadata._experiment_tracker.set_experiment(
                 experiment=experiment,
                 description=experiment_description,
                 backing_tensorboard=experiment_tensorboard,
@@ -236,7 +236,7 @@ class _Config:
     @property
     def experiment_name(self) -> Optional[str]:
         """Default experiment name, if provided."""
-        return metadata.experiment_tracker.experiment_name
+        return metadata._experiment_tracker.experiment_name
 
     def get_client_options(
         self,

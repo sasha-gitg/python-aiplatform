@@ -72,7 +72,7 @@ class TestExperiments(e2e_base.TestEndToEnd):
         )
 
         shared_state["resources"].append(
-            aiplatform.metadata.experiment_tracker.experiment
+            aiplatform.metadata._experiment_tracker.experiment
         )
 
     def test_get_experiment(self):

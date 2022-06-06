@@ -701,7 +701,8 @@ class ExperimentRun(
         if backing_tensorboard_resource:
             self.assign_backing_tensorboard(tensorboard=backing_tensorboard_resource)
 
-    def _format_tensorboard_experiment_display_name(self, experiment_name: str) -> str:
+    @staticmethod
+    def _format_tensorboard_experiment_display_name(experiment_name: str) -> str:
         """Formats Tensorboard experiment name that backs this run.
         Args:
             experiment_name (str): Required. The name of the experiment.
@@ -1039,8 +1040,8 @@ class ExperimentRun(
             else gca_execution.Execution.State.COMPLETE
         )
 
-        if metadata.experiment_tracker.experiment_run is self:
-            metadata.experiment_tracker.end_run(state=state)
+        if metadata._experiment_tracker.experiment_run is self:
+            metadata._experiment_tracker.end_run(state=state)
         else:
             self.end_run(state)
 

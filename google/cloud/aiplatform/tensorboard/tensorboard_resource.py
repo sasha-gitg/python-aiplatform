@@ -1201,10 +1201,10 @@ class TensorboardTimeSeries(_TensorboardServiceResource):
 
         _LOGGER.log_create_complete(cls, tensorboard_time_series, "tb_time_series")
 
-        return cls(
-            tensorboard_time_series_name=tensorboard_time_series.name,
-            credentials=credentials,
-        )
+        self = cls._empty_constructor(project=project, location=location, credentials=credentials)
+        self._gca_resource=tensorboard_time_series
+
+        return self
 
     @classmethod
     def list(

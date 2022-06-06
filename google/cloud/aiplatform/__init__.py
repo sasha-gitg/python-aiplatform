@@ -80,14 +80,14 @@ init = initializer.global_config.init
 
 get_pipeline_df = metadata._MetadataService.get_pipeline_df
 
-log_params = metadata.experiment_tracker.log_params
-log_metrics = metadata.experiment_tracker.log_metrics
-get_experiment_df = metadata.experiment_tracker.get_experiment_df
-start_run = metadata.experiment_tracker.start_run
-start_execution = metadata.experiment_tracker.start_execution
-log = metadata.experiment_tracker.log
-log_time_series_metrics = metadata.experiment_tracker.log_time_series_metrics
-end_run = metadata.experiment_tracker.end_run
+log_params = metadata._experiment_tracker.log_params
+log_metrics = metadata._experiment_tracker.log_metrics
+get_experiment_df = metadata._experiment_tracker.get_experiment_df
+start_run = metadata._experiment_tracker.start_run
+start_execution = metadata._experiment_tracker.start_execution
+log = metadata._experiment_tracker.log
+log_time_series_metrics = metadata._experiment_tracker.log_time_series_metrics
+end_run = metadata._experiment_tracker.end_run
 
 Experiment = metadata.experiment_resources.Experiment
 ExperimentRun = metadata.experiment_run_resource.ExperimentRun

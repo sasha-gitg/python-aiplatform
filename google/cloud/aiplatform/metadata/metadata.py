@@ -52,195 +52,6 @@ def _get_experiment_schema_version() -> str:
 class _MetadataService:
     """Contains the exposed APIs to interact with the Managed Metadata Service."""
 
-    def __init__(self):
-        self._experiment = None
-        self._run = None
-        self._metrics = None
-
-    def reset(self):
-        """Reset all _MetadataService fields to None"""
-        self._experiment = None
-        self._run = None
-        self._metrics = None
-
-    @property
-    def experiment_name(self) -> Optional[str]:
-        """Return the experiment name of the _MetadataService, if experiment is not set, return None"""
-        if self._experiment:
-            return self._experiment.display_name
-        return None
-
-    @property
-    def run_name(self) -> Optional[str]:
-        """Return the run name of the _MetadataService, if run is not set, return None"""
-        if self._run:
-            return self._run.display_name
-        return None
-
-    def set_experiment(self, experiment: str, description: Optional[str] = None):
-        """Setup a experiment to current session.
-
-        Args:
-            experiment (str):
-                Required. Name of the experiment to assign current session with.
-            description (str):
-                Optional. Description of an experiment.
-        Raises:
-            ValueError:
-                If Context with same name as experiment has already been created with
-                a different type.
-
-        """
-
-        metadata_store._MetadataStore.get_or_create()
-
-        self.reset()
-
-        experiment_context = context._Context.get_or_create(
-            resource_id=experiment,
-            display_name=experiment,
-            description=description,
-            schema_title=constants.SYSTEM_EXPERIMENT,
-            schema_version=_get_experiment_schema_version(),
-            metadata=constants.EXPERIMENT_METADATA,
-        )
-
-        if experiment_context.schema_title != constants.SYSTEM_EXPERIMENT:
-            raise ValueError(
-                f"Experiment name {experiment} has been used to create other type of resources "
-                f"({experiment_context.schema_title}) in this MetadataStore, please choose a different experiment name."
-            )
-
-        if description and experiment_context.description != description:
-            experiment_context.update(
-                metadata=experiment_context.metadata, description=description
-            )
-
-        self._experiment = experiment_context
-
-    def _create_experiment_run_context(self, run: str) -> context._Context:
-        """Creates an ExperimentRun Context and assigns it as a current Experiment.
-
-        Args:
-            run (str): The name of the experiment run.
-        Returns:
-            _Context: The Context representing this ExperimentRun
-        Raises:
-            ValueError:
-                If name of experiment has already been used in Metadata Store to create another
-                Context.
-        """
-        run_context_id = f"{self._experiment.name}-{run}"
-
-        run_context = context._Context.get_or_create(
-            resource_id=run_context_id,
-            display_name=run,
-            schema_title=constants.SYSTEM_EXPERIMENT_RUN,
-            schema_version=constants.SCHEMA_VERSIONS[constants.SYSTEM_EXPERIMENT_RUN],
-            metadata=constants.EXPERIMENT_METADATA,
-        )
-
-        if run_context.schema_title != constants.SYSTEM_EXPERIMENT_RUN:
-            raise ValueError(
-                f"Run name {run} has been used to create other type of resources ({run_context.schema_title}) "
-                "in this MetadataStore, please choose a different run name."
-            )
-
-        if self._experiment.resource_name not in run_context.parent_contexts:
-            self._experiment.add_context_children([run_context])
-            run_context._sync_gca_resource()
-
-        return run_context
-
-    def start_run(self, run: str):
-        """Setup a run to current session.
-
-        Args:
-            run (str):
-                Required. Name of the run to assign current session with.
-        Raises:
-            ValueError:
-                if experiment is not set. Or if run execution or metrics artifact is already created
-                but with a different schema.
-        """
-
-        if not self._experiment:
-            raise ValueError(
-                "No experiment set for this run. Make sure to call aiplatform.init(experiment='my-experiment') "
-                "before trying to start_run. "
-            )
-
-        run_execution_id = f"{self._experiment.name}-{run}"
-        run_execution = execution.Execution.get_or_create(
-            resource_id=run_execution_id,
-            display_name=run,
-            schema_title=constants.SYSTEM_RUN,
-            schema_version=constants.SCHEMA_VERSIONS[constants.SYSTEM_RUN],
-        )
-        if run_execution.schema_title != constants.SYSTEM_RUN:
-            raise ValueError(
-                f"Run name {run} has been used to create other type of resources ({run_execution.schema_title}) "
-                "in this MetadataStore, please choose a different run name."
-            )
-
-        self._experiment.add_artifacts_and_executions(
-            execution_resource_names=[run_execution.resource_name]
-        )
-
-        metrics_artifact_id = f"{self._experiment.name}-{run}-metrics"
-        metrics_artifact = artifact.Artifact.get_or_create(
-            resource_id=metrics_artifact_id,
-            display_name=metrics_artifact_id,
-            schema_title=constants.SYSTEM_METRICS,
-            schema_version=constants.SCHEMA_VERSIONS[constants.SYSTEM_METRICS],
-        )
-        if metrics_artifact.schema_title != constants.SYSTEM_METRICS:
-            raise ValueError(
-                f"Run name {run} has been used to create other type of resources ({metrics_artifact.schema_title}) "
-                "in this MetadataStore, please choose a different run name."
-            )
-        run_execution._add_artifact(artifacts=[metrics_artifact], input=False)
-
-        self._run = run_execution
-        self._metrics = metrics_artifact
-
-    def log_params(self, params: Dict[str, Union[float, int, str]]):
-        """Log single or multiple parameters with specified key and value pairs.
-
-        Args:
-            params (Dict):
-                Required. Parameter key/value pairs.
-        """
-
-        self._validate_experiment_and_run(method_name="log_params")
-        # query the latest run execution resource before logging.
-        run_execution = execution.Execution.get_or_create(
-            resource_id=self._run.name,
-            schema_title=constants.SYSTEM_RUN,
-            schema_version=constants.SCHEMA_VERSIONS[constants.SYSTEM_RUN],
-        )
-        run_execution.update(metadata=params)
-
-    def log_metrics(self, metrics: Dict[str, Union[float, int]]):
-        """Log single or multiple Metrics with specified key and value pairs.
-
-        Args:
-            metrics (Dict):
-                Required. Metrics key/value pairs. Only float and int are supported format for value.
-        Raises:
-            TypeError: If value contains unsupported types.
-            ValueError: If Experiment or Run is not set.
-        """
-
-        self._validate_experiment_and_run(method_name="log_metrics")
-        self._validate_metrics_value_type(metrics)
-        # query the latest metrics artifact resource before logging.
-        metric_artifact = artifact.Artifact.get_or_create(
-            resource_id=self._metrics.name,
-            schema_title=constants.SYSTEM_METRICS,
-            schema_version=constants.SCHEMA_VERSIONS[constants.SYSTEM_METRICS],
-        )
-        metric_artifact.update(metadata=metrics)
 
     @staticmethod
     def get_pipeline_df(pipeline: str) -> "pd.DataFrame":  # noqa: F821
@@ -269,35 +80,6 @@ class _MetadataService:
             context_resource_name=pipeline_resource_name,
             source=source,
         )
-
-    def _validate_experiment_and_run(self, method_name: str):
-        if not self._experiment:
-            raise ValueError(
-                f"No experiment set. Make sure to call aiplatform.init(experiment='my-experiment') "
-                f"before trying to {method_name}. "
-            )
-        if not self._run:
-            raise ValueError(
-                f"No run set. Make sure to call aiplatform.start_run('my-run') before trying to {method_name}. "
-            )
-
-    @staticmethod
-    def _validate_metrics_value_type(metrics: Dict[str, Union[float, int]]):
-        """Verify that metrics value are with supported types.
-
-        Args:
-            metrics (Dict):
-                Required. Metrics key/value pairs. Only float and int are supported format for value.
-        Raises:
-            TypeError: If value contains unsupported types.
-        """
-
-        for key, value in metrics.items():
-            if isinstance(value, int) or isinstance(value, float):
-                continue
-            raise TypeError(
-                f"metrics contain unsupported value types. key: {key}; value: {value}; type: {type(value)}"
-            )
 
     @staticmethod
     def _get_experiment_or_pipeline_resource_name(
@@ -369,7 +151,7 @@ class _MetadataService:
                 )
             )
 
-            for metric_artifact in run_execution.query_input_and_output_artifacts():
+            for metric_artifact in run_execution.get_output_artifacts():
                 run_dict.update(
                     _MetadataService._execution_to_column_named_metadata(
                         "metric", metric_artifact.metadata
@@ -869,4 +651,4 @@ class _ExperimentTracker:
         return run_execution
 
 
-experiment_tracker = _ExperimentTracker()
+_experiment_tracker = _ExperimentTracker()

@@ -155,6 +155,10 @@ def delete_tensorboard_mock():
         delete_tensorboard_mock.return_value = delete_tensorboard_lro_mock
         yield delete_tensorboard_mock
 
+_TEST_TENSORBOARD_EXPERIMENT = gca_tensorboard_experiment.TensorboardExperiment(
+                name=_TEST_TENSORBOARD_EXPERIMENT_NAME,
+                display_name=_TEST_DISPLAY_NAME,
+            )
 
 @pytest.fixture
 def get_tensorboard_experiment_mock():
@@ -162,12 +166,7 @@ def get_tensorboard_experiment_mock():
         tensorboard_service_client.TensorboardServiceClient,
         "get_tensorboard_experiment",
     ) as get_tensorboard_experiment__mock:
-        get_tensorboard_experiment__mock.return_value = (
-            gca_tensorboard_experiment.TensorboardExperiment(
-                name=_TEST_TENSORBOARD_EXPERIMENT_NAME,
-                display_name=_TEST_DISPLAY_NAME,
-            )
-        )
+        get_tensorboard_experiment__mock.return_value = _TEST_TENSORBOARD_EXPERIMENT
         yield get_tensorboard_experiment__mock
 
 
@@ -177,12 +176,7 @@ def create_tensorboard_experiment_mock():
         tensorboard_service_client.TensorboardServiceClient,
         "create_tensorboard_experiment",
     ) as create_tensorboard_experiment_mock:
-        create_tensorboard_experiment_mock.return_value = (
-            gca_tensorboard_experiment.TensorboardExperiment(
-                name=_TEST_TENSORBOARD_EXPERIMENT_NAME,
-                display_name=_TEST_DISPLAY_NAME,
-            )
-        )
+        create_tensorboard_experiment_mock.return_value = _TEST_TENSORBOARD_EXPERIMENT
         yield create_tensorboard_experiment_mock
 
 
@@ -210,14 +204,13 @@ def list_tensorboard_experiment_mock():
         tensorboard_service_client.TensorboardServiceClient,
         "list_tensorboard_experiments",
     ) as list_tensorboard_experiment_mock:
-        list_tensorboard_experiment_mock.return_value = [
-            gca_tensorboard_experiment.TensorboardExperiment(
-                name=_TEST_TENSORBOARD_EXPERIMENT_NAME,
-                display_name=_TEST_DISPLAY_NAME,
-            )
-        ]
+        list_tensorboard_experiment_mock.return_value = [_TEST_TENSORBOARD_EXPERIMENT]
         yield list_tensorboard_experiment_mock
 
+_TEST_TENSORBOARD_RUN = gca_tensorboard_run.TensorboardRun(
+    name=_TEST_TENSORBOARD_RUN_NAME,
+    display_name=_TEST_DISPLAY_NAME,
+)
 
 @pytest.fixture
 def get_tensorboard_run_mock():
@@ -225,10 +218,7 @@ def get_tensorboard_run_mock():
         tensorboard_service_client.TensorboardServiceClient,
         "get_tensorboard_run",
     ) as get_tensorboard_run_mock:
-        get_tensorboard_run_mock.return_value = gca_tensorboard_run.TensorboardRun(
-            name=_TEST_TENSORBOARD_RUN_NAME,
-            display_name=_TEST_DISPLAY_NAME,
-        )
+        get_tensorboard_run_mock.return_value = _TEST_TENSORBOARD_RUN
         yield get_tensorboard_run_mock
 
 
@@ -238,10 +228,7 @@ def create_tensorboard_run_mock():
         tensorboard_service_client.TensorboardServiceClient,
         "create_tensorboard_run",
     ) as create_tensorboard_run_mock:
-        create_tensorboard_run_mock.return_value = gca_tensorboard_run.TensorboardRun(
-            name=_TEST_TENSORBOARD_RUN_NAME,
-            display_name=_TEST_DISPLAY_NAME,
-        )
+        create_tensorboard_run_mock.return_value = _TEST_TENSORBOARD_RUN
         yield create_tensorboard_run_mock
 
 
@@ -285,17 +272,19 @@ def write_tensorboard_run_data_mock():
         yield write_tensorboard_run_data_mock
 
 
+_TEST_TENSORBOARD_TIME_SERIES = gca_tensorboard_time_series.TensorboardTimeSeries(
+    name=_TEST_TENSORBOARD_TIME_SERIES_NAME,
+    display_name=_TEST_TIME_SERIES_DISPLAY_NAME,
+    value_type=gca_tensorboard_time_series.TensorboardTimeSeries.ValueType.SCALAR,
+)
+
 @pytest.fixture
 def get_tensorboard_time_series_mock():
     with patch.object(
         tensorboard_service_client.TensorboardServiceClient,
         "get_tensorboard_time_series",
     ) as get_tensorboard_time_series_mock:
-        get_tensorboard_time_series_mock.return_value = gca_tensorboard_time_series.TensorboardTimeSeries(
-            name=_TEST_TENSORBOARD_TIME_SERIES_NAME,
-            display_name=_TEST_TIME_SERIES_DISPLAY_NAME,
-            value_type=gca_tensorboard_time_series.TensorboardTimeSeries.ValueType.SCALAR,
-        )
+        get_tensorboard_time_series_mock.return_value = _TEST_TENSORBOARD_TIME_SERIES
         yield get_tensorboard_time_series_mock
 
 
@@ -305,11 +294,7 @@ def create_tensorboard_time_series_mock():
         tensorboard_service_client.TensorboardServiceClient,
         "create_tensorboard_time_series",
     ) as create_tensorboard_time_series_mock:
-        create_tensorboard_time_series_mock.return_value = gca_tensorboard_time_series.TensorboardTimeSeries(
-            name=_TEST_TENSORBOARD_TIME_SERIES_NAME,
-            display_name=_TEST_TIME_SERIES_DISPLAY_NAME,
-            value_type=gca_tensorboard_time_series.TensorboardTimeSeries.ValueType.SCALAR,
-        )
+        create_tensorboard_time_series_mock.return_value = _TEST_TENSORBOARD_TIME_SERIES
         yield create_tensorboard_time_series_mock
 
 
@@ -338,11 +323,7 @@ def list_tensorboard_time_series_mock():
         "list_tensorboard_time_series",
     ) as list_tensorboard_time_series_mock:
         list_tensorboard_time_series_mock.return_value = [
-            gca_tensorboard_time_series.TensorboardTimeSeries(
-                name=_TEST_TENSORBOARD_TIME_SERIES_NAME,
-                display_name=_TEST_TIME_SERIES_DISPLAY_NAME,
-                value_type=gca_tensorboard_time_series.TensorboardTimeSeries.ValueType.SCALAR,
-            )
+            _TEST_TENSORBOARD_TIME_SERIES
         ]
         yield list_tensorboard_time_series_mock
 

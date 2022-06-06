@@ -448,14 +448,14 @@ class Experiment:
             Tensorboard resource if one exists.
         """
         tensorboard_resource_name = self._metadata_context.metadata.get(
-            "backing_tensorboard_resource"
+            constants._BACKING_TENSORBOARD_RESOURCE_KEY
         )
 
         if not tensorboard_resource_name:
             with _SetLoggerLevel(resource):
                 self._metadata_context.sync_resource()
             tensorboard_resource_name = self._metadata_context.metadata.get(
-                "backing_tensorboard_resource"
+                constants._BACKING_TENSORBOARD_RESOURCE_KEY
             )
 
         if tensorboard_resource_name:
@@ -530,7 +530,7 @@ class Experiment:
             )
 
         self._metadata_context.update(
-            metadata={"backing_tensorboard_resource": tensorboard.resource_name}
+            metadata={constants._BACKING_TENSORBOARD_RESOURCE_KEY: tensorboard.resource_name}
         )
 
     def _log_experiment_loggable(self, experiment_loggable: "_ExperimentLoggable"):
