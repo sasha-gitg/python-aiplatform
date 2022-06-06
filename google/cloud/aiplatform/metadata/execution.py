@@ -15,10 +15,9 @@
 # limitations under the License.
 #
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Union
 
 import proto
-from google.api_core import exceptions
 from google.auth import credentials as auth_credentials
 
 from google.cloud.aiplatform import base

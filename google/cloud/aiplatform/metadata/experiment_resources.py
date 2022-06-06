@@ -32,7 +32,6 @@ from google.cloud.aiplatform.metadata import metadata_store
 from google.cloud.aiplatform.metadata import resource
 from google.cloud.aiplatform.metadata import utils as metadata_utils
 from google.cloud.aiplatform.tensorboard import tensorboard_resource
-from google.cloud.aiplatform.utils import resource_manager_utils
 
 _LOGGER = base.Logger(__name__)
 

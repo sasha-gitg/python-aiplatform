@@ -39,8 +39,10 @@ from google.cloud.aiplatform.compat.types import tensorboard_run as gca_tensorbo
 from google.cloud.aiplatform.compat.types import (
     tensorboard_time_series as gca_tensorboard_time_series,
 )
-from google.cloud.aiplatform.metadata import constants, experiment_run_resource
+from google.cloud.aiplatform.metadata import constants
+from google.cloud.aiplatform.metadata import experiment_run_resource
 from google.cloud.aiplatform.metadata import metadata
+from google.cloud.aiplatform.metadata import metadata_store
 from google.cloud.aiplatform.metadata import utils as metadata_utils
 from google.cloud.aiplatform import utils
 
@@ -345,16 +347,6 @@ def get_tensorboard_time_series_not_found_mock():
 
 
 @pytest.fixture
-def list_tensorboard_time_series_mock():
-    with patch.object(
-        TensorboardServiceClient,
-        "list_tensorboard_time_series",
-    ) as list_tensorboard_time_series_mock:
-        list_tensorboard_time_series_mock.return_value = []
-        yield list_tensorboard_time_series_mock
-
-
-@pytest.fixture
 def query_execution_inputs_and_outputs_mock():
     with patch.object(
         MetadataServiceClient, "query_execution_inputs_and_outputs"
@@ -606,14 +598,14 @@ def create_experiment_run_context_mock():
 @pytest.fixture
 def update_experiment_run_context_to_running():
     with patch.object(MetadataServiceClient, "update_context") as update_context_mock:
-        get_context_mock.side_effect = [_EXPERIMENT_RUN_MOCK]
-        yield get_context_mock
+        update_context_mock.side_effect = [_EXPERIMENT_RUN_MOCK]
+        yield update_context_mock
 
 
 @pytest.fixture
 def update_context_mock_v2():
     with patch.object(MetadataServiceClient, "update_context") as update_context_mock:
-        get_context_mock.side_effect = [
+        update_context_mock.side_effect = [
             # experiment run
             GapicContext(
                 name=_TEST_EXPERIMENT_RUN_CONTEXT_NAME,
@@ -637,7 +629,7 @@ def update_context_mock_v2():
             ),
         ]
 
-        yield get_context_mock
+        yield update_context_mock
 
 
 @pytest.fixture
@@ -756,6 +748,8 @@ _TEST_LEGACY_SYSTEM_RUN_EXECUTION = GapicExecution(
     schema_version=constants.SCHEMA_VERSIONS[constants.SYSTEM_RUN],
     metadata=_TEST_PARAMS,
 )
+
+
 # backward compatibility
 @pytest.fixture()
 def list_executions_mock_for_experiment_dataframe():
@@ -900,7 +894,7 @@ class TestExperiments:
             project=_TEST_PROJECT, location=_TEST_LOCATION, credentials=creds
         )
 
-        store = metadata.metadata_store._MetadataStore.get_or_create()
+        store = metadata_store._MetadataStore.get_or_create()
 
         assert store.api_client._transport._credentials == creds
 
@@ -917,7 +911,7 @@ class TestExperiments:
             project=_TEST_PROJECT, location=_TEST_LOCATION, credentials=creds
         )
 
-        store = metadata.metadata_store._MetadataStore.get_or_create()
+        store = metadata_store._MetadataStore.get_or_create()
 
         assert store.api_client._transport._credentials == creds
 

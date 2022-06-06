@@ -915,7 +915,7 @@ class TensorboardRun(_TensorboardServiceResource):
         plugin_name: str = "scalars",
         plugin_data: Optional[bytes] = None,
         description: Optional[str] = None,
-    ) -> "TensorboardTimeseries":
+    ) -> "TensorboardTimeSeries":
         """Creates a new tensorboard time series.
 
         Example Usage:

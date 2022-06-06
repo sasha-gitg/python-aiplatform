@@ -19,7 +19,7 @@ import abc
 import collections
 import re
 from copy import deepcopy
-from typing import Dict, Optional, Sequence, Union, Any, List
+from typing import Dict, Optional, Union, Any, List
 
 import proto
 from google.api_core import exceptions

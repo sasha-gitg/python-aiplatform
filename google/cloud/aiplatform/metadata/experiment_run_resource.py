@@ -36,9 +36,7 @@ from google.cloud.aiplatform.metadata import context
 from google.cloud.aiplatform.metadata import execution
 from google.cloud.aiplatform.metadata import experiment_resources
 from google.cloud.aiplatform.metadata import metadata
-from google.cloud.aiplatform.metadata import metadata_store
 from google.cloud.aiplatform.metadata import resource
-from google.cloud.aiplatform.metadata import schema
 from google.cloud.aiplatform.metadata import utils as metadata_utils
 from google.cloud.aiplatform.tensorboard import tensorboard_resource
 
@@ -976,7 +974,7 @@ class ExperimentRun(
             self._metadata_node.update(metadata={constants._METRIC_KEY: metrics})
 
     @_v1_not_supported
-    def get_time_series_data_frame(self) -> "pd.DataFrame":
+    def get_time_series_data_frame(self) -> "pd.DataFrame":  # noqa: F821
         """Returns all time series in this Run as a DataFrame.
 
         Returns:

@@ -26,13 +26,11 @@ from google.cloud.aiplatform import base
 from google.cloud.aiplatform import gapic
 from google.cloud.aiplatform import pipeline_jobs
 from google.cloud.aiplatform.compat.types import execution as gca_execution
-from google.cloud.aiplatform.metadata import artifact
 from google.cloud.aiplatform.metadata import constants
 from google.cloud.aiplatform.metadata import context
 from google.cloud.aiplatform.metadata import execution
 from google.cloud.aiplatform.metadata import experiment_resources
 from google.cloud.aiplatform.metadata import experiment_run_resource
-from google.cloud.aiplatform.metadata import metadata_store
 from google.cloud.aiplatform.tensorboard import tensorboard_resource
 
 _LOGGER = base.Logger(__name__)
@@ -631,8 +629,8 @@ class _ExperimentTracker:
             if self.experiment_run._is_legacy_experiment_run():
                 _LOGGER.warn(
                     f"{self.experiment_run._run_name} is an Experiment run created in Vertex Experiment Preview",
-                    f" and does not support tracking Executions."
-                    f" Please create a new Experiment run to track executions against an Experiment run.",
+                    " and does not support tracking Executions."
+                    " Please create a new Experiment run to track executions against an Experiment run.",
                 )
             else:
                 self.experiment_run.associate_execution(run_execution)

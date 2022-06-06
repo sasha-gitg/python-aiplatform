@@ -42,7 +42,7 @@ from google.cloud.aiplatform.matching_engine import (
     MatchingEngineIndex,
     MatchingEngineIndexEndpoint,
 )
-from google.cloud.aiplatform.metadata import metadata
+from google.cloud.aiplatform import metadata
 from google.cloud.aiplatform.models import Endpoint
 from google.cloud.aiplatform.models import Model
 from google.cloud.aiplatform.model_evaluation import ModelEvaluation
@@ -78,16 +78,16 @@ aiplatform.init(project='my_project')
 """
 init = initializer.global_config.init
 
-get_pipeline_df = metadata._MetadataService.get_pipeline_df
+get_pipeline_df = metadata.metadata._MetadataService.get_pipeline_df
 
-log_params = metadata._experiment_tracker.log_params
-log_metrics = metadata._experiment_tracker.log_metrics
-get_experiment_df = metadata._experiment_tracker.get_experiment_df
-start_run = metadata._experiment_tracker.start_run
-start_execution = metadata._experiment_tracker.start_execution
-log = metadata._experiment_tracker.log
-log_time_series_metrics = metadata._experiment_tracker.log_time_series_metrics
-end_run = metadata._experiment_tracker.end_run
+log_params = metadata.metadata._experiment_tracker.log_params
+log_metrics = metadata.metadata._experiment_tracker.log_metrics
+get_experiment_df = metadata.metadata._experiment_tracker.get_experiment_df
+start_run = metadata.metadata._experiment_tracker.start_run
+start_execution = metadata.metadata._experiment_tracker.start_execution
+log = metadata.metadata._experiment_tracker.log
+log_time_series_metrics = metadata.metadata._experiment_tracker.log_time_series_metrics
+end_run = metadata.metadata._experiment_tracker.end_run
 
 Experiment = metadata.experiment_resources.Experiment
 ExperimentRun = metadata.experiment_run_resource.ExperimentRun

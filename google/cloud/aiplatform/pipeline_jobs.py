@@ -545,7 +545,7 @@ class PipelineJob(
                 )
             else:
                 raise RuntimeError(
-                    f"Cannot associate PipelineJob to Experiment because PipelineJob context could not be found."
+                    "Cannot associate PipelineJob to Experiment because PipelineJob context could not be found."
                 )
 
         return context._Context(
