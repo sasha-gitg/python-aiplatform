@@ -25,11 +25,19 @@ from google.cloud.aiplatform import base
 from google.cloud.aiplatform import initializer
 from google.cloud.aiplatform import utils
 from google.cloud.aiplatform.compat.types import tensorboard as gca_tensorboard
-from google.cloud.aiplatform.compat.types import tensorboard_data as gca_tensorboard_data
-from google.cloud.aiplatform.compat.types import tensorboard_experiment as gca_tensorboard_experiment
+from google.cloud.aiplatform.compat.types import (
+    tensorboard_data as gca_tensorboard_data,
+)
+from google.cloud.aiplatform.compat.types import (
+    tensorboard_experiment as gca_tensorboard_experiment,
+)
 from google.cloud.aiplatform.compat.types import tensorboard_run as gca_tensorboard_run
-from google.cloud.aiplatform.compat.types import tensorboard_service as gca_tensorboard_service
-from google.cloud.aiplatform.compat.types import tensorboard_time_series as gca_tensorboard_time_series
+from google.cloud.aiplatform.compat.types import (
+    tensorboard_service as gca_tensorboard_service,
+)
+from google.cloud.aiplatform.compat.types import (
+    tensorboard_time_series as gca_tensorboard_time_series,
+)
 
 _LOGGER = base.Logger(__name__)
 
@@ -942,7 +950,6 @@ class TensorboardRun(_TensorboardServiceResource):
         Returns:
             TensorboardTimeSeries: The TensorboardTimeSeries resource.
         """
-        
 
         tb_time_series = TensorboardTimeSeries.create(
             display_name=display_name,
@@ -968,7 +975,7 @@ class TensorboardRun(_TensorboardServiceResource):
 
         print(time_series_data['loss'].values[-1].scalar.value)
         ```
-        
+
         Returns:
             Dictionary of time series metric id to TimeSeriesData.
         """
@@ -1201,8 +1208,10 @@ class TensorboardTimeSeries(_TensorboardServiceResource):
 
         _LOGGER.log_create_complete(cls, tensorboard_time_series, "tb_time_series")
 
-        self = cls._empty_constructor(project=project, location=location, credentials=credentials)
-        self._gca_resource=tensorboard_time_series
+        self = cls._empty_constructor(
+            project=project, location=location, credentials=credentials
+        )
+        self._gca_resource = tensorboard_time_series
 
         return self
 

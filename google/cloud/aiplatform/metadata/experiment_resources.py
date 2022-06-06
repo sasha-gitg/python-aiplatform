@@ -376,7 +376,9 @@ class Experiment:
         )
 
         filter_str = metadata_utils._make_filter_string(
-            schema_title=sorted(list(_SUPPORTED_LOGGABLE_RESOURCES[context._Context].keys())),
+            schema_title=sorted(
+                list(_SUPPORTED_LOGGABLE_RESOURCES[context._Context].keys())
+            ),
             parent_contexts=[self._metadata_context.resource_name],
         )
         contexts = context._Context.list(filter_str, **service_request_args)
@@ -530,7 +532,9 @@ class Experiment:
             )
 
         self._metadata_context.update(
-            metadata={constants._BACKING_TENSORBOARD_RESOURCE_KEY: tensorboard.resource_name}
+            metadata={
+                constants._BACKING_TENSORBOARD_RESOURCE_KEY: tensorboard.resource_name
+            }
         )
 
     def _log_experiment_loggable(self, experiment_loggable: "_ExperimentLoggable"):

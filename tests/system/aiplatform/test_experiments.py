@@ -50,7 +50,6 @@ class TestExperiments(e2e_base.TestEndToEnd):
         cls._experiment_name = cls._make_display_name("experiment")[:30]
         cls._dataset_artifact_name = cls._make_display_name("ds-artifact")[:30]
         cls._dataset_artifact_uri = cls._make_display_name("ds-uri")
-        # TODO(remove from CI)
         cls._pipeline_job_id = cls._make_display_name("job-id")
 
     def test_create_experiment(self, shared_state):
@@ -202,7 +201,6 @@ class TestExperiments(e2e_base.TestEndToEnd):
 
         assert run.state == aiplatform.gapic.Execution.State.COMPLETE
 
-    # TODO(remove when running CI)
     def test_add_pipeline_job_to_experiment(self, shared_state):
         import kfp.v2.dsl as dsl
         import kfp.v2.compiler as compiler
@@ -227,7 +225,7 @@ class TestExperiments(e2e_base.TestEndToEnd):
             display_name=self._make_display_name("experiment pipeline job"),
             template_path="pipeline.json",
             job_id=self._pipeline_job_id,
-            pipeline_root="gs://ucaip-mb-sasha-dev",  # f'gs://{shared_state["staging_bucket_name"]}',
+            pipeline_root=f'gs://{shared_state["staging_bucket_name"]}',
             parameter_values={"learning_rate": 0.1, "dropout_rate": 0.2},
         )
 

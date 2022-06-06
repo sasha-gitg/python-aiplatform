@@ -578,8 +578,8 @@ class PipelineJob(
             credentials=node.credentials,
             filter=metadata_utils._make_filter_string(
                 in_context=[node.resource_name],
-                schema_title=metadata_constants.SYSTEM_RUN
-            )
+                schema_title=metadata_constants.SYSTEM_RUN,
+            ),
         )
 
         metric_artifacts = artifact.Artifact.list(
@@ -588,8 +588,8 @@ class PipelineJob(
             credentials=node.credentials,
             filter=metadata_utils._make_filter_string(
                 in_context=[node.resource_name],
-                schema_title=metadata_constants.SYSTEM_METRICS
-            )
+                schema_title=metadata_constants.SYSTEM_METRICS,
+            ),
         )
 
         row = experiment_resources._ExperimentRow(
@@ -598,9 +598,9 @@ class PipelineJob(
 
         if system_run_executions:
             row.params = {
-                        key[len(metadata_constants.PIPELINE_PARAM_PREFIX):]: value
-                        for key, value in system_run_executions[0].metadata.items()
-                    }
+                key[len(metadata_constants.PIPELINE_PARAM_PREFIX) :]: value
+                for key, value in system_run_executions[0].metadata.items()
+            }
             row.state = system_run_executions[0].state.name
 
         for metric_artifact in metric_artifacts:

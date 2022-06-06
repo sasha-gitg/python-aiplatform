@@ -52,7 +52,6 @@ def _get_experiment_schema_version() -> str:
 class _MetadataService:
     """Contains the exposed APIs to interact with the Managed Metadata Service."""
 
-
     @staticmethod
     def get_pipeline_df(pipeline: str) -> "pd.DataFrame":  # noqa: F821
         """Returns a Pandas DataFrame of the parameters and metrics associated with one pipeline.

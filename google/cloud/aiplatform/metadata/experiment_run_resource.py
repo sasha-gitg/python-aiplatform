@@ -595,8 +595,10 @@ class ExperimentRun(
         """
 
         if len(run_id) > 128:
-            raise ValueError(f"Length of Experiment ID and Run ID cannot be greater than 128. "
-                             f"{run_id} is of length {len(run_id)}")
+            raise ValueError(
+                f"Length of Experiment ID and Run ID cannot be greater than 128. "
+                f"{run_id} is of length {len(run_id)}"
+            )
 
     @classmethod
     def create(

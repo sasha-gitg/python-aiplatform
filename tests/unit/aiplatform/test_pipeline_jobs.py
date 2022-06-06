@@ -38,7 +38,7 @@ from google.cloud.aiplatform_v1.services.pipeline_service import (
 from google.cloud.aiplatform_v1.types import (
     pipeline_job as gca_pipeline_job_v1,
     pipeline_state as gca_pipeline_state_v1,
-    context as gca_context_v1
+    context as gca_context_v1,
 )
 
 _TEST_PROJECT = "test-project"
@@ -212,8 +212,7 @@ def make_pipeline_job(state):
             pipeline_run_context=gca_context_v1.Context(
                 name=_TEST_PIPELINE_JOB_NAME,
             )
-        )
-
+        ),
     )
 
 
@@ -299,7 +298,6 @@ def mock_load_yaml_and_json(job_spec):
 
 
 class TestPipelineJob:
-
     def setup_method(self):
         reload(initializer)
         reload(aiplatform)
