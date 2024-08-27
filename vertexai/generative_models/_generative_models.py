@@ -17,6 +17,7 @@
 
 from collections.abc import Mapping
 import copy
+import dataclasses
 import io
 import json
 import pathlib
@@ -35,6 +36,8 @@ from typing import (
     TYPE_CHECKING,
 )
 
+
+from vertexai.generative_models import shared_types
 from google.cloud.aiplatform import initializer as aiplatform_initializer
 from google.cloud.aiplatform import utils as aiplatform_utils
 from google.cloud.aiplatform_v1beta1 import types as aiplatform_types
@@ -49,6 +52,7 @@ from google.cloud.aiplatform_v1beta1.types import (
 )
 from google.cloud.aiplatform_v1beta1.types import tool as gapic_tool_types
 from google.protobuf import json_format
+
 import warnings
 
 if TYPE_CHECKING:
@@ -165,7 +169,7 @@ def _validate_generate_content_parameters(
     if generation_config:
         if not isinstance(
             generation_config,
-            (gapic_content_types.GenerationConfig, GenerationConfig, Dict),
+            (gapic_content_types.GenerationConfig, GenerationConfig, Dict, shared_types.GenerationConfig),
         ):
             raise TypeError(
                 "generation_config must either be a GenerationConfig object or a dictionary representation of it."
@@ -465,6 +469,8 @@ class _GenerativeModel:
                 gapic_generation_config = gapic_content_types.GenerationConfig(
                     **generation_config
                 )
+            elif isinstance(generation_config, shared_types.GenerationConfig):
+                gapic_generation_config = gapic_content_types.GenerationConfig(**dataclasses.asdict(generation_config))
 
         gapic_safety_settings = None
         if safety_settings:
