@@ -37,7 +37,7 @@ from typing import (
 )
 
 
-from vertexai.generative_models import shared_types
+from google.generativeai import types as shared_types
 from google.cloud.aiplatform import initializer as aiplatform_initializer
 from google.cloud.aiplatform import utils as aiplatform_utils
 from google.cloud.aiplatform_v1beta1 import types as aiplatform_types

@@ -256,6 +256,7 @@ setuptools.setup(
         "google-cloud-bigquery >= 1.15.0, < 4.0.0dev, !=3.20.0",
         "google-cloud-resource-manager >= 1.3.3, < 3.0.0dev",
         "shapely < 3.0.0dev",
+        "google-generativeai @ git+https://github.com/sasha-gitg/generative-ai-python@shared_types#egg=google-generativeai"
     )
     + genai_requires,
     extras_require={
